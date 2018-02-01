@@ -27,10 +27,11 @@ If you want to find opportunities on the exchanges of only a certain country<sup
 ```
 from peregrine import build_specific_collections, get_opportunity_for_market
 
-us_eth_btc_exchanges = build_specific_collections({'countries': US})
+us_eth_btc_exchanges = build_specific_collections({'countries': 'US' })
 opportunity = get_opportunity_for_market("ETH/BTC", us_eth_btc_exchanges)
 print(opportunity)
 ```
+<sup>1</sup>: Accepted arguments in place of "US" in this example are Austria, Australia, Bulgaria, Brazil, British Virgin Islands, Canada, China, Czech Republic, EU, Germany, Hong Kong, Iceland, India, Indonesia, Israel, Japan, Mexico, New Zealand, Panama, Philippines, Poland, Russia, Seychelles, Singapore, South Korea, St. Vincent & Grenadines, Sweden, Tanzania, Thailand, Turkey, US, UK, Ukraine, and Vietnam.
 ## To Do
 * Create a tool to identify which exchanges take abnormally long to respond to API requests.
 * Implement a fix to convert from USDT to USD and back again for markets based on USDT
