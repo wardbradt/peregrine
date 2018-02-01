@@ -21,10 +21,10 @@ class CollectionBuilder:
         asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
 
         if write:
-            with open('collections.json', 'w') as outfile:
+            with open('collections/collections.json', 'w') as outfile:
                 json.dump(self.collections, outfile)
 
-            with open('singularly_available_markets.json', 'w') as outfile:
+            with open('collections/singularly_available_markets.json', 'w') as outfile:
                 json.dump(self.singularly_available_markets, outfile)
 
         return self.collections
@@ -56,8 +56,8 @@ class CollectionBuilder:
         except ccxt.ExchangeNotAvailable:
             print("not available: " + exchange_name)
             return None
-        except ccxt.BaseError:
-            print("{} threw an error".format(exchange_name))
+        except ccxt.BaseError as e:
+            print("{} threw {}".format(exchange_name, str(e)))
             return None
 
         return exchange
@@ -105,6 +105,9 @@ class SpecificCollectionBuilder(CollectionBuilder):
 def build_all_collections(write=True):
     builder = CollectionBuilder()
     return builder.build_all_collections(write)
+
+
+build_all_collections()
 
 
 def build_specific_collections(rules, blacklist=False, write=False):
