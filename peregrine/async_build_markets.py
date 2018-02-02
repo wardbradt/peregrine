@@ -8,7 +8,7 @@ class CollectionBuilder:
     def __init__(self):
         all_exchanges = ccxt.exchanges
         # bter frequently has a broken API and flowbtc and yunbi always throw request timeouts.
-        [all_exchanges.remove(exchange_name) for exchange_name in ['bter', 'flowbtc', 'yunbi']]
+        [all_exchanges.remove(exchange_name) if exchange_name in all_exchanges else None for exchange_name in ['bter', 'flowbtc', 'yunbi']]
         self.exchanges = all_exchanges
         # keys are market names and values are an array of names of exchanges which support that market
         self.collections = {}
@@ -21,10 +21,10 @@ class CollectionBuilder:
         asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
 
         if write:
-            with open('collections/collections.json', 'w') as outfile:
+            with open('peregrine/collections/collections.json', 'w') as outfile:
                 json.dump(self.collections, outfile)
 
-            with open('collections/singularly_available_markets.json', 'w') as outfile:
+            with open('peregrine/collections/singularly_available_markets.json', 'w') as outfile:
                 json.dump(self.singularly_available_markets, outfile)
 
         return self.collections
@@ -76,9 +76,9 @@ class SpecificCollectionBuilder(CollectionBuilder):
             return
 
         for key, desired_value in self.rules.items():
-            if exchange[key]:
-                exchange_value = exchange[key]
-            else:
+            try:
+                exchange_value = getattr(exchange, key)
+            except AttributeError:
                 raise ValueError("{} is not a valid property of {}".format(key, exchange.name))
             if isinstance(exchange_value, str):
                 # Note, this line is A XOR B where A is self.blacklist and B is exchange_value != desired_value
@@ -107,9 +107,8 @@ def build_all_collections(write=True):
     return builder.build_all_collections(write)
 
 
-build_all_collections()
-
-
 def build_specific_collections(rules, blacklist=False, write=False):
     builder = SpecificCollectionBuilder(rules, blacklist)
     return builder.build_all_collections(write)
+
+

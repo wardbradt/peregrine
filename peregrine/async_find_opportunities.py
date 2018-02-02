@@ -2,6 +2,10 @@ import ccxt.async as ccxt
 import asyncio
 import json
 
+import os
+dir_path = os.path.dirname(os.path.realpath(__file__))
+print(dir_path)
+
 
 class SingularlyAvailableExchangeError(Exception):
     def __init__(self, market_ticker):
