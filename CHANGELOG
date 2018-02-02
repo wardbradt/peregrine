@@ -5,4 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## [0.1.0] - 2018-02-01
 ### Added
+- Unit tests for async_build_markets.py in peregrine/tests/test_build_collections.py
+
+### Changed
+- Moved src files to peregrine subdirectory.
+
+## [0.1.0] - 2018-02-01
+### Added
 - Initial Commit
