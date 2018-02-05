@@ -35,3 +35,4 @@ print(opportunity)
 ## To Do
 * Create a tool to identify which exchanges take abnormally long to respond to API requests.
 * Implement a fix to convert from USDT to USD and back again for markets based on USDT
+* Package for pip

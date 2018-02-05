@@ -3,10 +3,10 @@ import asyncio
 import json
 
 
-class CollectionBuilder:
+cdef class CollectionBuilder:
 
     def __init__(self):
-        all_exchanges = ccxt.exchanges
+        cdef list all_exchanges = ccxt.exchanges
         # bter frequently has a broken API and flowbtc and yunbi always throw request timeouts.
         [all_exchanges.remove(exchange_name) if exchange_name in all_exchanges else None for exchange_name in ['bter', 'flowbtc', 'yunbi']]
         self.exchanges = all_exchanges
@@ -14,20 +14,6 @@ class CollectionBuilder:
         self.collections = {}
         # stores markets which are only available on one exchange: keys are markets names and values are exchange names
         self.singularly_available_markets = {}
-
-    def build_all_collections(self, write=True):
-        futures = [asyncio.ensure_future(self._add_exchange_to_collections(exchange_name)) for exchange_name in
-                   self.exchanges]
-        asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
-
-        if write:
-            with open('peregrine/collections/collections.json', 'w') as outfile:
-                json.dump(self.collections, outfile)
-
-            with open('peregrine/collections/singularly_available_markets.json', 'w') as outfile:
-                json.dump(self.singularly_available_markets, outfile)
-
-        return self.collections
 
     async def _add_exchange_to_collections(self, exchange_name: str):
         exchange = await self._get_exchange(exchange_name)
@@ -63,7 +49,7 @@ class CollectionBuilder:
         return exchange
 
 
-class SpecificCollectionBuilder(CollectionBuilder):
+cdef class SpecificCollectionBuilder(CollectionBuilder):
 
     def __init__(self, rules, blacklist=False):
         super().__init__()
@@ -102,13 +88,38 @@ class SpecificCollectionBuilder(CollectionBuilder):
                 self.singularly_available_markets[market_name] = exchange_name
 
 
-def build_all_collections(write=True):
-    builder = CollectionBuilder()
-    return builder.build_all_collections(write)
+cpdef dict build_all_collections(CollectionBuilder builder, bool write):
+    """
+    
+    :param builder: A CollectionBuilder object. Can be None.
+    :param write: If collections and singularly_available_markets should be written to the JSON files in the collections
+    directory. Must be True or False.
+    :return: 
+    """
+    if builder is None:
+        builder = CollectionBuilder()
+    cdef list futures = [asyncio.ensure_future(builder._add_exchange_to_collections(exchange_name)) for exchange_name in
+                   builder.exchanges]
+    asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
+
+    if write:
+        with open('cythonperegrine/collections/collections.json', 'w') as outfile:
+            json.dump(builder.collections, outfile)
+
+        with open('cythonperegrine/collections/singularly_available_markets.json', 'w') as outfile:
+            json.dump(builder.singularly_available_markets, outfile)
+
+    return builder.collections
 
 
-def build_specific_collections(rules, blacklist=False, write=False):
+cpdef dict build_specific_collections(dict rules, bool blacklist, bool write):
+    """
+    :param rules:
+    :param blacklist: if true, rules will serve as a blacklist instead of a whitelist.
+    :param write: if true, the program will write to the JSON files in collections
+    :return: 
+    """
     builder = SpecificCollectionBuilder(rules, blacklist)
-    return builder.build_all_collections(write)
+    return build_all_collections(builder, write)
 
 

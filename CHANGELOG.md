@@ -3,7 +3,22 @@ All notable changes to this project will be documented in this file. As this pro
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [0.1.0] - 2018-02-01
+## [0.2.0] - 2018-02-04
+### Added
+- Cython version of code (under the /cythonperegrine directory)
+- Examples directory (/examples)
+- First speed comparison (in /examples)
+- `calculate_time` in examples/calculate_time.py, a utility for measuring the speed of functions
+- type aliases to some function declarations in peregrine/
+
+### Removed
+- Unnecessary print statement at start of async_find_opportunities.py
+
+### Changed
+- Cleaned up some doc strings
+- test_bid_and_ask to _test_bid_and_ask to denote that it should not be accessed by users
+
+## [0.1.1] - 2018-02-01
 ### Added
 - Unit tests for async_build_markets.py in peregrine/tests/test_build_collections.py
 
