@@ -1,7 +1,7 @@
 # peregrine-scout
 Detects arbitrage opportunities across 93 cryptocurrency markets
 
-An extension of the asynchronous feature set of the [CCXT](https://github.com/ccxt/ccxt/) cryptocurrency trading library
+An extension of the asynchronous feature set of the [CCXT](https://github.com/ccxt/ccxt/) cryptocurrency trading library offering Python and Cython versions
 
 ## Example Usage
 ```
