@@ -2,6 +2,7 @@ from unittest import TestCase
 from peregrine.async_build_markets import build_all_collections, build_specific_collections
 import ccxt.async as ccxt
 
+
 class TestCollectionBuilder(TestCase):
 
     def test_exchange_length(self):
@@ -16,14 +17,10 @@ class TestSpecificCollectionBuilder(TestCase):
     def test_errors_raised(self):
         with self.assertRaises(ValueError):
             # note the misspelling of "countries" as "contries"
-            build_specific_collections({'contries': 'US'})
-
-        with self.assertRaises(ValueError):
-            # raises an error because only strings are allowed as values in the dict.
-            build_specific_collections({'countries': ['US', 'EU']})
+            build_specific_collections(contries='US')
 
     def test_whitelist_blacklist(self):
-        us_exchanges = build_specific_collections({'countries': 'US'})
+        us_exchanges = build_specific_collections(countries='US')
         confirmed_us_exchanges = []
         for exchange_list in us_exchanges.values():
             for exchange_name in exchange_list:
@@ -34,7 +31,7 @@ class TestSpecificCollectionBuilder(TestCase):
                 self.assertIn('US', exchange.countries)
                 confirmed_us_exchanges.append(exchange_name)
 
-        not_us_exchanges = build_specific_collections({'countries': 'US'}, blacklist=True)
+        not_us_exchanges = build_specific_collections(countries='US', blacklist=True)
         confirmed_not_us_exchanges = []
         for exchange_list in not_us_exchanges.values():
             for exchange_name in exchange_list:
@@ -44,3 +41,6 @@ class TestSpecificCollectionBuilder(TestCase):
                 exchange = getattr(ccxt, exchange_name)()
                 self.assertNotIn('US', exchange.countries)
                 confirmed_not_us_exchanges.append(exchange_name)
+
+    def test_kwargs_with_dict_as_rule(self):
+        pass

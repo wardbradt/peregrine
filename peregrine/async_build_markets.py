@@ -67,27 +67,29 @@ class CollectionBuilder:
         return exchange
 
 
+class ExchangeFailsCriteriaError(Exception):
+    pass
+
+
 class SpecificCollectionBuilder(CollectionBuilder):
 
-    def __init__(self, rules, blacklist=False):
+    def __init__(self, blacklist=False, **kwargs):
         """
-        Rules is a dict which takes strings as values and keys. Look at this part of the ccxt manual:
-        https://github.com/ccxt/ccxt/wiki/Manual#user-content-exchange-structure for insight into what are acceptable
-        rules. Typical use case is 'countries' as a value and Australia, Bulgaria, Brazil, British Virgin Islands,
-        Canada, China, Czech Republic, EU, Germany, Hong Kong, Iceland, India, Indonesia, Israel, Japan, Mexico,
-        New Zealand, Panama, Philippines, Poland, Russia, Seychelles, Singapore, South Korea, St. Vincent & Grenadines,
-        Sweden, Tanzania, Thailand, Turkey, US UK, Ukraine, or Vietnam as a key.
-        :param rules:
+        **kwargs should restrict acceptable exchanges. Only acceptable keys and values are strings. Look at this part of
+        the ccxt manual: https://github.com/ccxt/ccxt/wiki/Manual#user-content-exchange-structure for insight into what
+        are acceptable rules.
+
+        Typical use case for **kwargs is 'countries' as a value and Australia, Bulgaria, Brazil, British Virgin
+        Islands, Canada, China, Czech Republic, EU, Germany, Hong Kong, Iceland, India, Indonesia, Israel, Japan,
+        Mexico, New Zealand, Panama, Philippines, Poland, Russia, Seychelles, Singapore, South Korea,
+        St. Vincent & Grenadines, Sweden, Tanzania, Thailand, Turkey, US, UK, Ukraine, or Vietnam as a key.
         :param blacklist:
         """
         super().__init__()
+        self.rules = kwargs
         self.blacklist = blacklist
-        self.rules = rules
 
-    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
-        exchange = await self._get_exchange(exchange_name, ccxt_errors)
-        if exchange is None:
-            return
+    def check_exchange_meets_criteria(self, exchange):
 
         for key, desired_value in self.rules.items():
             try:
@@ -97,15 +99,46 @@ class SpecificCollectionBuilder(CollectionBuilder):
             if isinstance(actual_value, str):
                 # Note, this line is A XOR B where A is self.blacklist and B is actual_value != desired_value
                 if self.blacklist != (actual_value != desired_value):
-                    return
+                    raise ExchangeFailsCriteriaError()
             elif isinstance(actual_value, list):
+                # in all cases where an attribute of an exchange is a list, that list's elements' types are uniform
+                # so type of the first element is representative of type of all elements 
+                type_of_actual_value = type(actual_value[0])
+                if not isinstance(desired_value, type_of_actual_value):
+                    raise ValueError("Exchange attribute {} is a list of {}s. "
+                                     "A non-{} object was passed.".format(key, str(type_of_actual_value),
+                                                                          str(type_of_actual_value)))
                 # The comment above the previous conditional also explains this conditional
                 if self.blacklist != (desired_value not in actual_value):
-                    return
+                    raise ExchangeFailsCriteriaError()
+            elif isinstance(actual_value, dict):
+                # When given a dict as a desired value, this checks that the values in the actual value are equal to
+                # the values in desired value
+                if not isinstance(desired_value, dict):
+                    raise ValueError("Exchange attribute {} is a dict but supplied preferred value {} is not a dict"
+                                     .format(key, desired_value))
+                # the items of actual_value. these are typically the items in an exchange's has, timeframes, or
+                # markets_by_id attribute.
+                actual_value_items = actual_value.items()
+                for key_a, value_a in actual_value_items:
+                    if self.blacklist != (actual_value[key_a] != value_a):
+                        raise ExchangeFailsCriteriaError()
             else:
-                raise ValueError("The rules parameter for SpecificCollectionBuilder takes only strings and lists"
+                raise ValueError("**kwargs for SpecificCollectionBuilder takes only strings, lists, and dicts"
                                  "as values.")
 
+    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
+        exchange = await self._get_exchange(exchange_name, ccxt_errors)
+        if exchange is None:
+            return
+
+        # Implicitly (and intentionally) does not except ValueErrors riased by check_exchange_meets_criteria
+        try:
+            self.check_exchange_meets_criteria(exchange)
+        except ExchangeFailsCriteriaError:
+            return
+
+        # Having reached this, it is known that exchange meets the criteria given in **kwargs.
         for market_name in exchange.symbols:
             if market_name in self.collections:
                 self.collections[market_name].append(exchange_name)
@@ -121,9 +154,6 @@ def build_all_collections(write=True, ccxt_errors=False):
     return builder.build_all_collections(write, ccxt_errors)
 
 
-def build_specific_collections(rules, blacklist=False, write=False):
-    builder = SpecificCollectionBuilder(rules, blacklist)
+def build_specific_collections(blacklist=False, write=False, **kwargs):
+    builder = SpecificCollectionBuilder(blacklist, **kwargs)
     return builder.build_all_collections(write)
-
-
-build_all_collections()
