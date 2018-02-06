@@ -13,7 +13,7 @@ class InvalidExchangeError(Exception):
                                                    .format(market_ticker))
 
 
-def get_exchange_pairs_for_market(market_ticker, from_json=True):
+def get_exchange_pairs_for_market(market_ticker):
 
     with open('collections/collections.json') as f:
         collections = json.load(f)

@@ -62,5 +62,5 @@ class TestCollectionBuilders(TestCase):
                 if exchange_name in confirmed_exchanges:
                     continue
                 exchange = getattr(ccxt, exchange_name)()
-                self.assertTrue(exchange.hasPrivateAPI)
+                self.assertTrue(exchange.has['fetchOrderBook'])
                 confirmed_exchanges.append(exchange_name)

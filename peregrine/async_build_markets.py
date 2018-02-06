@@ -114,15 +114,14 @@ class SpecificCollectionBuilder(CollectionBuilder):
                 if not isinstance(desired_value, dict):
                     raise ValueError("Exchange attribute {} is a dict but supplied preferred value {} is not a dict"
                                      .format(key, desired_value))
-                # the items of actual_value. these are typically the items in an exchange's has, timeframes, or
-                # markets_by_id attribute.
-                actual_value_items = actual_value.items()
-                for key_a, value_a in actual_value_items:
+                desired_value_items = desired_value.items()
+                for key_a, value_a in desired_value_items:
                     if self.blacklist != (actual_value[key_a] != value_a):
                         raise ExchangeFailsCriteriaError()
 
-            if self.blacklist != (actual_value != desired_value):
-                raise ExchangeFailsCriteriaError()
+            else:
+                if self.blacklist != (actual_value != desired_value):
+                    raise ExchangeFailsCriteriaError()
 
     async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
         exchange = await self._get_exchange(exchange_name, ccxt_errors)
@@ -146,8 +145,9 @@ class SpecificCollectionBuilder(CollectionBuilder):
                 self.singularly_available_markets[market_name] = exchange_name
 
 
-def build_collections(write=True, ccxt_errors=False, blacklist=False):
-    return build_specific_collections(write, ccxt_errors, blacklist, hasPrivateAPI=True)
+def build_collections(blacklist=False, write=True, ccxt_errors=False):
+    return build_specific_collections(blacklist, write,
+                                      ccxt_errors, has={'fetchOrderBook': True})
 
 
 def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, **kwargs):
@@ -157,4 +157,4 @@ def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, 
 
 def build_all_collections(write=True, ccxt_errors=False):
     builder = CollectionBuilder()
-    return builder.build_all_collections(write, ccxt_errors)
+    return builder.build_all_collections(write=write, ccxt_errors=ccxt_errors)
