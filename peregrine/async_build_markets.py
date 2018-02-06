@@ -8,7 +8,8 @@ class CollectionBuilder:
     def __init__(self):
         all_exchanges = ccxt.exchanges
         # bter frequently has a broken API and flowbtc and yunbi always throw request timeouts.
-        [all_exchanges.remove(exchange_name) if exchange_name in all_exchanges else None for exchange_name in ['bter', 'flowbtc', 'yunbi']]
+        # [all_exchanges.remove(exchange_name) if exchange_name in all_exchanges else None for exchange_name in
+        # ['bter', 'flowbtc', 'yunbi']]
         self.exchanges = all_exchanges
         # keys are market names and values are an array of names of exchanges which support that market
         self.collections = {}

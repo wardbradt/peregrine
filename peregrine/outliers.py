@@ -40,6 +40,14 @@ def clean_request_timeout_for_exchanges(exchange_list):
     return detector.request_time_dict
 
 
+async def get_request_times(exchange_list):
+    detector = OutlierDetector()
+    futures = [asyncio.ensure_future(detector.load_markets_for_exchange(exchange_name)) for exchange_name in
+               exchange_list]
+    await asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
+    return detector.request_time_dict
+
+
 def reject_outliers(data: dict, m=2):
     """
     Modified from a function found at
