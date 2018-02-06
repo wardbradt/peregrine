@@ -54,6 +54,3 @@ def reject_outliers(data: dict, m=2):
     std = np.std(values)
     filtered = [exchange_name for exchange_name, request_time in data.items() if (request_time < mean + m * std)]
     return filtered
-
-
-print(reject_outliers(clean_request_timeout_for_market("BTC/USD")))

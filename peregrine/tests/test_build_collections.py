@@ -1,5 +1,5 @@
 from unittest import TestCase
-from peregrine.async_build_markets import build_all_collections, build_specific_collections
+from peregrine.async_build_markets import build_all_collections, build_specific_collections, build_collections
 import ccxt.async as ccxt
 
 
@@ -12,7 +12,7 @@ class TestCollectionBuilder(TestCase):
             self.assertGreater(len(exchange_list), 1)
 
 
-class TestSpecificCollectionBuilder(TestCase):
+class TestCollectionBuilders(TestCase):
 
     def test_errors_raised(self):
         with self.assertRaises(ValueError):
@@ -52,4 +52,15 @@ class TestSpecificCollectionBuilder(TestCase):
                     continue
                 exchange = getattr(ccxt, exchange_name)()
                 self.assertTrue(exchange.hasFetchOrderBook and exchange.hasCreateOrder)
+                confirmed_exchanges.append(exchange_name)
+
+    def test_build_collections(self):
+        collections = build_collections(write=False)
+        confirmed_exchanges = []
+        for exchange_list in collections.values():
+            for exchange_name in exchange_list:
+                if exchange_name in confirmed_exchanges:
+                    continue
+                exchange = getattr(ccxt, exchange_name)()
+                self.assertTrue(exchange.hasPrivateAPI)
                 confirmed_exchanges.append(exchange_name)

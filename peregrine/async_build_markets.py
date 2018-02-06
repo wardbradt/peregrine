@@ -96,11 +96,8 @@ class SpecificCollectionBuilder(CollectionBuilder):
                 actual_value = getattr(exchange, key)
             except AttributeError:
                 raise ValueError("{} is not a valid property of {}".format(key, exchange.name))
-            if isinstance(actual_value, str):
-                # Note, this line is A XOR B where A is self.blacklist and B is actual_value != desired_value
-                if self.blacklist != (actual_value != desired_value):
-                    raise ExchangeFailsCriteriaError()
-            elif isinstance(actual_value, list):
+
+            if isinstance(actual_value, list):
                 # in all cases where an attribute of an exchange is a list, that list's elements' types are uniform
                 # so type of the first element is representative of type of all elements
                 type_of_actual_value = type(actual_value[0])
@@ -108,7 +105,7 @@ class SpecificCollectionBuilder(CollectionBuilder):
                     raise ValueError("Exchange attribute {} is a list of {}s. "
                                      "A non-{} object was passed.".format(key, str(type_of_actual_value),
                                                                           str(type_of_actual_value)))
-                # The comment above the previous conditional also explains this conditional
+                # Note, this line is A XOR B where A is self.blacklist and B is desired_value not in actual_value
                 if self.blacklist != (desired_value not in actual_value):
                     raise ExchangeFailsCriteriaError()
             elif isinstance(actual_value, dict):
@@ -123,9 +120,9 @@ class SpecificCollectionBuilder(CollectionBuilder):
                 for key_a, value_a in actual_value_items:
                     if self.blacklist != (actual_value[key_a] != value_a):
                         raise ExchangeFailsCriteriaError()
-            else:
-                raise ValueError("**kwargs for SpecificCollectionBuilder takes only strings, lists, and dicts"
-                                 "as values.")
+
+            if self.blacklist != (actual_value != desired_value):
+                raise ExchangeFailsCriteriaError()
 
     async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
         exchange = await self._get_exchange(exchange_name, ccxt_errors)
@@ -149,11 +146,15 @@ class SpecificCollectionBuilder(CollectionBuilder):
                 self.singularly_available_markets[market_name] = exchange_name
 
 
-def build_all_collections(write=True, ccxt_errors=False):
-    builder = CollectionBuilder()
+def build_collections(write=True, ccxt_errors=False, blacklist=False):
+    return build_specific_collections(write, ccxt_errors, blacklist, hasPrivateAPI=True)
+
+
+def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, **kwargs):
+    builder = SpecificCollectionBuilder(blacklist, **kwargs)
     return builder.build_all_collections(write, ccxt_errors)
 
 
-def build_specific_collections(blacklist=False, write=False, **kwargs):
-    builder = SpecificCollectionBuilder(blacklist, **kwargs)
-    return builder.build_all_collections(write)
+def build_all_collections(write=True, ccxt_errors=False):
+    builder = CollectionBuilder()
+    return builder.build_all_collections(write, ccxt_errors)
