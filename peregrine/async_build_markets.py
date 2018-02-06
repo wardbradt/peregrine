@@ -14,6 +14,7 @@ class CollectionBuilder:
         self.collections = {}
         # stores markets which are only available on one exchange: keys are markets names and values are exchange names
         self.singularly_available_markets = {}
+        self.exchange_wait_limit = 1000000;
 
     def build_all_collections(self, write=True):
         futures = [asyncio.ensure_future(self._add_exchange_to_collections(exchange_name)) for exchange_name in
@@ -31,6 +32,7 @@ class CollectionBuilder:
 
     async def _add_exchange_to_collections(self, exchange_name: str):
         exchange = await self._get_exchange(exchange_name)
+
         if exchange is None:
             return
         for market_name in exchange.symbols:
@@ -47,7 +49,11 @@ class CollectionBuilder:
         exchange = getattr(ccxt, exchange_name)()
 
         try:
+            start_time = time.time()
             await exchange.load_markets()
+            end_time = time.time()
+            if(end_time-start_time>self.exchange_wait_limit)
+            print("Exchange API slow to respond:" + exchange_name)
         except ccxt.AuthenticationError:
             return None
         except ccxt.RequestTimeout:
@@ -110,5 +116,3 @@ def build_all_collections(write=True):
 def build_specific_collections(rules, blacklist=False, write=False):
     builder = SpecificCollectionBuilder(rules, blacklist)
     return builder.build_all_collections(write)
-
-
