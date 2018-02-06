@@ -16,6 +16,12 @@ class CollectionBuilder:
         self.singularly_available_markets = {}
 
     def build_all_collections(self, write=True, ccxt_errors=False):
+        """
+        Refer to glossary.md for the definition of a "collection"
+        :param write: If true, will write collections and singularly_available_markets to json files in /collections
+        :param ccxt_errors: If true, this method will raise the errors ccxt raises
+        :return:
+        """
         futures = [asyncio.ensure_future(self._add_exchange_to_collections(exchange_name, ccxt_errors)) for exchange_name in
                    self.exchanges]
         asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
@@ -45,11 +51,8 @@ class CollectionBuilder:
     @staticmethod
     async def _get_exchange(exchange_name: str, ccxt_errors=False):
         """
-
-        :param exchange_name:
         :param ccxt_errors: if true, raises errors ccxt raises when calling load_markets. The common ones are
         RequestTimeout and ExchangeNotAvailable, which are caused by problems with exchanges' APIs.
-        :return:
         """
         exchange = getattr(ccxt, exchange_name)()
 
@@ -67,6 +70,16 @@ class CollectionBuilder:
 class SpecificCollectionBuilder(CollectionBuilder):
 
     def __init__(self, rules, blacklist=False):
+        """
+        Rules is a dict which takes strings as values and keys. Look at this part of the ccxt manual:
+        https://github.com/ccxt/ccxt/wiki/Manual#user-content-exchange-structure for insight into what are acceptable
+        rules. Typical use case is 'countries' as a value and Australia, Bulgaria, Brazil, British Virgin Islands,
+        Canada, China, Czech Republic, EU, Germany, Hong Kong, Iceland, India, Indonesia, Israel, Japan, Mexico,
+        New Zealand, Panama, Philippines, Poland, Russia, Seychelles, Singapore, South Korea, St. Vincent & Grenadines,
+        Sweden, Tanzania, Thailand, Turkey, US UK, Ukraine, or Vietnam as a key.
+        :param rules:
+        :param blacklist:
+        """
         super().__init__()
         self.blacklist = blacklist
         self.rules = rules
