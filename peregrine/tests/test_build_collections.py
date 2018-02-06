@@ -43,4 +43,13 @@ class TestSpecificCollectionBuilder(TestCase):
                 confirmed_not_us_exchanges.append(exchange_name)
 
     def test_kwargs_with_dict_as_rule(self):
-        pass
+        specific_collections = build_specific_collections(has={'fetchOrderBook': True, 'createOrder': True})
+        # exchanges which are confirmed to meet the given criteria (.hasFetchOrderBook and .hasCreateOrder)
+        confirmed_exchanges = []
+        for exchange_list in specific_collections.values():
+            for exchange_name in exchange_list:
+                if exchange_name in confirmed_exchanges:
+                    continue
+                exchange = getattr(ccxt, exchange_name)()
+                self.assertTrue(exchange.hasFetchOrderBook and exchange.hasCreateOrder)
+                confirmed_exchanges.append(exchange_name)

@@ -102,7 +102,7 @@ class SpecificCollectionBuilder(CollectionBuilder):
                     raise ExchangeFailsCriteriaError()
             elif isinstance(actual_value, list):
                 # in all cases where an attribute of an exchange is a list, that list's elements' types are uniform
-                # so type of the first element is representative of type of all elements 
+                # so type of the first element is representative of type of all elements
                 type_of_actual_value = type(actual_value[0])
                 if not isinstance(desired_value, type_of_actual_value):
                     raise ValueError("Exchange attribute {} is a list of {}s. "
