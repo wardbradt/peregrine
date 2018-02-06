@@ -3,7 +3,16 @@ All notable changes to this project will be documented in this file. As this pro
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [0.2.0] - 2018-02-04
+## [0.2.1] - 2018-02-06
+### Added
+- outliers.py
+
+### Changed
+- Added `ccxt_errors` to several methods in async_build_markets.py
+- Moved classes `SingularlyAvailableExchangeError`, `SingularlyAvailableExchangeError`, and `get_exchange_pairs_for_market` from async_find_opportunities.py to utils.py so that they can be accessed from all files
+- Added (but did not implement) `from_json` argument to `get_exchange_pairs_for_market`
+
+## [0.2.0] - 2018-02-05
 ### Added
 - Cython version of code (under the /cythonperegrine directory)
 - Examples directory (/examples)
