@@ -83,7 +83,6 @@ class SpecificCollectionBuilder(CollectionBuilder):
         Islands, Canada, China, Czech Republic, EU, Germany, Hong Kong, Iceland, India, Indonesia, Israel, Japan,
         Mexico, New Zealand, Panama, Philippines, Poland, Russia, Seychelles, Singapore, South Korea,
         St. Vincent & Grenadines, Sweden, Tanzania, Thailand, Turkey, US, UK, Ukraine, or Vietnam as a key.
-        :param blacklist:
         """
         super().__init__()
         self.rules = kwargs
@@ -128,7 +127,7 @@ class SpecificCollectionBuilder(CollectionBuilder):
         if exchange is None:
             return
 
-        # Implicitly (and intentionally) does not except ValueErrors riased by check_exchange_meets_criteria
+        # Implicitly (and intentionally) does not except ValueErrors raised by check_exchange_meets_criteria
         try:
             self.check_exchange_meets_criteria(exchange)
         except ExchangeFailsCriteriaError:
@@ -156,5 +155,12 @@ def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, 
 
 
 def build_all_collections(write=True, ccxt_errors=False):
+    """
+    Be careful when using this. build_collections is typically preferred over this method because build_collections only
+    accounts for exchanges which have a private API (and thus can be traded on).
+    :param write:
+    :param ccxt_errors:
+    :return:
+    """
     builder = CollectionBuilder()
     return builder.build_all_collections(write=write, ccxt_errors=ccxt_errors)
