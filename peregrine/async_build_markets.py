@@ -15,22 +15,22 @@ class CollectionBuilder:
         # stores markets which are only available on one exchange: keys are markets names and values are exchange names
         self.singularly_available_markets = {}
 
-    def build_all_collections(self, write=True):
-        futures = [asyncio.ensure_future(self._add_exchange_to_collections(exchange_name)) for exchange_name in
+    def build_all_collections(self, write=True, ccxt_errors=False):
+        futures = [asyncio.ensure_future(self._add_exchange_to_collections(exchange_name, ccxt_errors)) for exchange_name in
                    self.exchanges]
         asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
 
         if write:
-            with open('peregrine/collections/collections.json', 'w') as outfile:
+            with open('collections/collections.json', 'w') as outfile:
                 json.dump(self.collections, outfile)
 
-            with open('peregrine/collections/singularly_available_markets.json', 'w') as outfile:
+            with open('collections/singularly_available_markets.json', 'w') as outfile:
                 json.dump(self.singularly_available_markets, outfile)
 
         return self.collections
 
-    async def _add_exchange_to_collections(self, exchange_name: str):
-        exchange = await self._get_exchange(exchange_name)
+    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
+        exchange = await self._get_exchange(exchange_name, ccxt_errors)
         if exchange is None:
             return
         for market_name in exchange.symbols:
@@ -43,22 +43,23 @@ class CollectionBuilder:
                 self.singularly_available_markets[market_name] = exchange_name
 
     @staticmethod
-    async def _get_exchange(exchange_name: str):
+    async def _get_exchange(exchange_name: str, ccxt_errors=False):
+        """
+
+        :param exchange_name:
+        :param ccxt_errors: if true, raises errors ccxt raises when calling load_markets. The common ones are
+        RequestTimeout and ExchangeNotAvailable, which are caused by problems with exchanges' APIs.
+        :return:
+        """
         exchange = getattr(ccxt, exchange_name)()
 
-        try:
-            await exchange.load_markets()
-        except ccxt.AuthenticationError:
-            return None
-        except ccxt.RequestTimeout:
-            print("request timeout: " + exchange_name)
-            return None
-        except ccxt.ExchangeNotAvailable:
-            print("not available: " + exchange_name)
-            return None
-        except ccxt.BaseError as e:
-            print("{} threw {}".format(exchange_name, str(e)))
-            return None
+        if ccxt_errors:
+            await exchange.load_markets
+        else:
+            try:
+                await exchange.load_markets()
+            except ccxt.BaseError:
+                return None
 
         return exchange
 
@@ -70,8 +71,8 @@ class SpecificCollectionBuilder(CollectionBuilder):
         self.blacklist = blacklist
         self.rules = rules
 
-    async def _add_exchange_to_collections(self, exchange_name: str):
-        exchange = await self._get_exchange(exchange_name)
+    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
+        exchange = await self._get_exchange(exchange_name, ccxt_errors)
         if exchange is None:
             return
 
@@ -102,9 +103,9 @@ class SpecificCollectionBuilder(CollectionBuilder):
                 self.singularly_available_markets[market_name] = exchange_name
 
 
-def build_all_collections(write=True):
+def build_all_collections(write=True, ccxt_errors=False):
     builder = CollectionBuilder()
-    return builder.build_all_collections(write)
+    return builder.build_all_collections(write, ccxt_errors)
 
 
 def build_specific_collections(rules, blacklist=False, write=False):
@@ -112,3 +113,4 @@ def build_specific_collections(rules, blacklist=False, write=False):
     return builder.build_all_collections(write)
 
 
+build_all_collections()
