@@ -14,4 +14,4 @@ For example, the collection for the Gulden versus Bitcoin (NLG/BTC) market is co
 
 Singularly Available Market: A market which is only traded on one exchange. Examples are:
 - Bytecent vs Bitcoin (BYC/BTC, traded only on Bittrex)
-- Mineum vs Dogecoin (MNM/DOGW, traded only on Cryptopia)
+- Mineum vs Dogecoin (MNM/DOGE, traded only on Cryptopia)
