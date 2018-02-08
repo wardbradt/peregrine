@@ -80,10 +80,10 @@ class SpecificCollectionBuilder(CollectionBuilder):
         the ccxt manual: https://github.com/ccxt/ccxt/wiki/Manual#user-content-exchange-structure for insight into what
         are acceptable rules.
 
-        Typical use case for **kwargs is 'countries' as a value and Australia, Bulgaria, Brazil, British Virgin
+        Typical use case for **kwargs is 'countries' as a key and Australia, Bulgaria, Brazil, British Virgin
         Islands, Canada, China, Czech Republic, EU, Germany, Hong Kong, Iceland, India, Indonesia, Israel, Japan,
         Mexico, New Zealand, Panama, Philippines, Poland, Russia, Seychelles, Singapore, South Korea,
-        St. Vincent & Grenadines, Sweden, Tanzania, Thailand, Turkey, US, UK, Ukraine, or Vietnam as a key.
+        St. Vincent & Grenadines, Sweden, Tanzania, Thailand, Turkey, US, UK, Ukraine, or Vietnam as a value.
         """
         super().__init__()
         self.rules = kwargs
