@@ -3,15 +3,57 @@ import ccxt.async as ccxt
 import asyncio
 
 
+class AsyncBellmanGraphInitializer:
+
+    def __init__(self, exchange: ccxt.Exchange):
+        self.graph = {}
+        self.exchange = exchange
+
+    def initialize_completed_graph_for_exchange(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(asyncio.gather(asyncio.ensure_future(self.exchange.load_markets())))
+
+        futures = [asyncio.ensure_future(self.process_market(market_name)) for market_name in
+                   self.exchange.markets.keys()]
+        loop.run_until_complete(asyncio.gather(*futures))
+
+        return self.graph
+
+    async def process_market(self, market):
+        # todo: is there a benefit from differing bid and ask?
+        # for now, treating price as average of ask and bid
+        ticker = await self.exchange.fetch_ticker(market)
+        ticker_exchange_rate = (ticker['ask'] + ticker['bid']) / 2
+
+        # prevent math error when Bittrex (GEO/BTC) or other API gives 0 as ticker price
+        if ticker_exchange_rate == 0:
+            return
+
+        conversion_rate = -math.log(ticker_exchange_rate)
+        base_currency, quote_currency = market.split('/')
+
+        if base_currency not in self.graph:
+            self.graph[base_currency] = {}
+        if quote_currency not in self.graph:
+            self.graph[quote_currency] = {}
+
+        self.graph[base_currency][quote_currency] = conversion_rate
+        self.graph[quote_currency][base_currency] = -conversion_rate
+
+
+def async_initialize_completed_graph_for_exchange(exchange_name):
+    return AsyncBellmanGraphInitializer(getattr(ccxt, exchange_name)()).initialize_completed_graph_for_exchange()
+
+
 def initialize_completed_graph_for_exchange(exchange_name):
     graph = {}
     exchange = getattr(ccxt, exchange_name)()
     exchange.load_markets()
-    for market_name, market_info in exchange.markets.items():
+    for market_name in exchange.markets.keys():
         # todo: is there a benefit from differing bid and ask?
         # for now, treating price as average of ask and bid
-        ticker_exchange_rate = (exchange.fetch_ticker(market_name)['ask'] + exchange.fetch_ticker(market_name)[
-            'bid']) / 2
+        ticker_exchange_rate = (exchange.fetch_ticker(market_name)['ask'] +
+                                exchange.fetch_ticker(market_name)['bid']) / 2
         # prevent math error when Bittrex (GEO/BTC) or other API gives 0 as ticker price
         if ticker_exchange_rate == 0:
             continue
@@ -80,8 +122,8 @@ def bellman_ford(graph, source):
     # Step 3: check for negative-weight cycles
     for base_currency_node in graph:
         for quote_currency in graph[base_currency_node]:
-            if distance_to[quote_currency] < distance_to[base_currency_node] + graph[base_currency_node][
-                quote_currency]:
+            if distance_to[quote_currency] < distance_to[base_currency_node] + \
+                    graph[base_currency_node][quote_currency]:
                 return retrace_negative_loop(predecessor, source)
     return None
 

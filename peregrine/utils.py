@@ -7,10 +7,10 @@ class SingularlyAvailableExchangeError(Exception):
                                                                .format(market_ticker))
 
 
-class InvalidExchangeError(Exception):
+class ExchangeNotInCollectionsError(Exception):
     def __init__(self, market_ticker):
-        super(InvalidExchangeError, self).__init__("{} is either an invalid exchange or has a broken API."
-                                                   .format(market_ticker))
+        super(ExchangeNotInCollectionsError, self).__init__("{} is either an invalid exchange or has a broken API."
+                                                            .format(market_ticker))
 
 
 def get_exchange_pairs_for_market(market_ticker):
@@ -27,4 +27,4 @@ def get_exchange_pairs_for_market(market_ticker):
         if market_name == market_ticker:
             raise SingularlyAvailableExchangeError(market_ticker)
 
-    raise InvalidExchangeError(market_ticker)
+    raise ExchangeNotInCollectionsError(market_ticker)
