@@ -1,28 +1,17 @@
 import math
-import ccxt
+import ccxt.async as ccxt
+import asyncio
 
 
-def initialize_unweighted_graph(exchange_name):
-    """
-    Creates and returns graph object but does not populate graph with edge weights.
-    Incomplete.
-    """
-    graph = {}
-    exchange = getattr(ccxt, exchange_name)()
-    exchange.load_markets()
-    quote_currencies = []
-    for market_name, market_info in exchange.markets.items():
-        pass
-
-
-def initialize_completed_graph(exchange_name):
+def initialize_completed_graph_for_exchange(exchange_name):
     graph = {}
     exchange = getattr(ccxt, exchange_name)()
     exchange.load_markets()
     for market_name, market_info in exchange.markets.items():
         # todo: is there a benefit from differing bid and ask?
         # for now, treating price as average of ask and bid
-        ticker_exchange_rate = (exchange.fetch_ticker(market_name)['ask'] + exchange.fetch_ticker(market_name)['bid']) / 2
+        ticker_exchange_rate = (exchange.fetch_ticker(market_name)['ask'] + exchange.fetch_ticker(market_name)[
+            'bid']) / 2
         # prevent math error when Bittrex (GEO/BTC) or other API gives 0 as ticker price
         if ticker_exchange_rate == 0:
             continue
@@ -35,31 +24,9 @@ def initialize_completed_graph(exchange_name):
         if quote_currency not in graph:
             graph[quote_currency] = {}
 
-        graph[base_currency][quote_currency] = float(conversion_rate)
-        graph[quote_currency][base_currency] = -float(conversion_rate)
+        graph[base_currency][quote_currency] = conversion_rate
+        graph[quote_currency][base_currency] = -conversion_rate
 
-    return graph
-
-
-def make_graph_for_exchange(exchange_name):
-    graph = {}
-    exchange = getattr(ccxt, exchange_name)()
-    exchange.load_markets()
-
-    for market_name, market_info in exchange.markets.items():
-        # for now, treating price as average of ask and bid
-        ticker_price = (exchange.fetch_ticker(market_name)['ask'] + exchange.fetch_ticker(market_name)['bid']) / 2
-        # prevent math error when Bittrex (GEO/BTC) or other API gives 0 as ticker price
-        if ticker_price == 0:
-            continue
-        conversion_rate = -math.log(ticker_price)
-
-        base_currency, quote_currency = market_name.split('/')
-
-        if base_currency not in graph:
-            graph[base_currency] = {}
-
-        graph[base_currency][quote_currency] = float(conversion_rate)
     return graph
 
 
@@ -97,14 +64,6 @@ def relax(base_currency, quote_currency, graph, distance_to, predecessor):
     except KeyError:
         distance_to[quote_currency] = distance_to[base_currency] + graph[base_currency][quote_currency]
         predecessor[quote_currency] = base_currency
-# def bellman_ford(graph, source):
-#     """
-#     Creates and returns two dicts. The first, distTo, stores the path with the least weight from source->a for each
-#     vertex a in the graph
-#     :param graph:
-#     :param source:
-#     """
-#     pass
 
 
 def bellman_ford(graph, source):
@@ -117,12 +76,12 @@ def bellman_ford(graph, source):
             # For each neighbour of base_currency_node
             for quote_currency in graph[base_currency_node]:
                 relax(base_currency_node, quote_currency, graph, distance_to, predecessor)
-                # relax(quote_currency, base_currency_node, graph, distance_to, predecessor)
 
     # Step 3: check for negative-weight cycles
     for base_currency_node in graph:
         for quote_currency in graph[base_currency_node]:
-            if distance_to[quote_currency] < distance_to[base_currency_node] + graph[base_currency_node][quote_currency]:
+            if distance_to[quote_currency] < distance_to[base_currency_node] + graph[base_currency_node][
+                quote_currency]:
                 return retrace_negative_loop(predecessor, source)
     return None
 
@@ -140,36 +99,44 @@ def retrace_negative_loop(predecessor, start):
             return arbitrage_loop
 
 
-# a list of negative weight cycles (arbitrage opportunities) represented by a list of currency names in the order they
-# should be traded through
-paths = []
+def calculate_profit_ratio_for_path(graph, path):
+    money = 1
+    for i in range(len(path)):
+        if i + 1 < len(path):
+            start = path[i]
+            end = path[i + 1]
+            # todo: rate should not have to be inversed
+            rate = 1 / math.exp(-graph[start][end])
+            money *= rate
+    return money
 
-# graph = initialize_completed_graph('bitstamp')
-# for each node source_node in the graph, run bellman-ford on graph using source_node as the source node.
-graph = {'a': {'b': -math.log(2), 'c': math.log(1/3), 'd': -math.log(4), 'e': math.log(1/4)},
-         'b': {'a': math.log(2), 'c': -math.log(3)},
-         'c': {'a': -math.log(1/3), 'b': math.log(3)},
-         'd': {'a': math.log(4), 'e': -math.log(1.5)},
-         'e': {'d': math.log(1.5), 'a': -math.log(1/4)}}
-for source_node in graph:
-    # bellman_ford returns a negative weight cycle (arbitrage opportunity) or None
-    path = bellman_ford(graph, source_node)
 
-    if path not in paths and not None:
-        paths.append(path)
+def print_profit_opportunity_for_path(graph, path):
+    money = 100
+    print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
 
-for path in paths:
-    if path is None:
-        print("No opportunity here :(")
-    else:
-        money = 100
-        print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
+    for i in range(len(path)):
+        if i + 1 < len(path):
+            start = path[i]
+            end = path[i + 1]
+            # todo: rate should not have to be inversed
+            rate = 1 / math.exp(-graph[start][end])
+            money *= rate
+            print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
+                                                                    "money": money})
 
-        for i in range(len(path)):
-            if i + 1 < len(path):
-                start = path[i]
-                end = path[i + 1]
-                rate = math.exp(-graph[start][end])
-                money *= rate
-                print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
-                                                                        "money": money})
+
+def get_all_paths_for_exchange(exchange_name):
+    graph = initialize_completed_graph_for_exchange(exchange_name)
+    return get_all_paths_for_graph(graph)
+
+
+def get_path_from_node(graph: dict, source: str):
+    return bellman_ford(graph, source)
+
+
+def get_all_paths_for_graph(graph: dict):
+    paths = []
+    for source_node in graph.keys():
+        paths.append(bellman_ford(graph, source_node))
+    return paths
