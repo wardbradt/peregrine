@@ -41,35 +41,8 @@ class AsyncBellmanGraphInitializer:
         self.graph[quote_currency][base_currency] = -conversion_rate
 
 
-def async_initialize_completed_graph_for_exchange(exchange_name):
-    return AsyncBellmanGraphInitializer(getattr(ccxt, exchange_name)()).initialize_completed_graph_for_exchange()
-
-
 def initialize_completed_graph_for_exchange(exchange_name):
-    graph = {}
-    exchange = getattr(ccxt, exchange_name)()
-    exchange.load_markets()
-    for market_name in exchange.markets.keys():
-        # todo: is there a benefit from differing bid and ask?
-        # for now, treating price as average of ask and bid
-        ticker_exchange_rate = (exchange.fetch_ticker(market_name)['ask'] +
-                                exchange.fetch_ticker(market_name)['bid']) / 2
-        # prevent math error when Bittrex (GEO/BTC) or other API gives 0 as ticker price
-        if ticker_exchange_rate == 0:
-            continue
-
-        conversion_rate = -math.log(ticker_exchange_rate)
-        base_currency, quote_currency = market_name.split('/')
-
-        if base_currency not in graph:
-            graph[base_currency] = {}
-        if quote_currency not in graph:
-            graph[quote_currency] = {}
-
-        graph[base_currency][quote_currency] = conversion_rate
-        graph[quote_currency][base_currency] = -conversion_rate
-
-    return graph
+    return AsyncBellmanGraphInitializer(getattr(ccxt, exchange_name)()).initialize_completed_graph_for_exchange()
 
 
 # Step 1: For each node prepare the distance_to and predecessor
