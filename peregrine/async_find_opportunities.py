@@ -46,3 +46,8 @@ class OpportunityFinder:
 
         return {'highest_bid': self.highest_bid,
                 'lowest_ask': self.lowest_ask}
+
+
+def get_opportunity_for_market(ticker, exchange_list=None):
+    finder = OpportunityFinder(ticker, exchange_list)
+    return finder.find_min_max()
