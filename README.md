@@ -36,3 +36,7 @@ print(opportunity)
 * Implement a fix to convert from USDT to USD and back again for markets based on USDT
 * Package for pip
 * Allow exchange objects (instead of exchange names) to be used as arguments for functions in several files (namely async_find_opportunities.py)
+* Write better examples and unit tests
+## Potential Enhancements
+* Create a data visualization
+* Implement machine learning to see which markets or exchanges consistently host the greatest disparities
