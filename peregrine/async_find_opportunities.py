@@ -1,6 +1,6 @@
 import ccxt.async as ccxt
 import asyncio
-from peregrine.utils import get_exchange_pairs_for_market
+from peregrine.utils import get_exchanges_for_market
 
 
 class OpportunityFinder:
@@ -12,7 +12,7 @@ class OpportunityFinder:
         highest market bid price.
         """
         if exchange_list is None:
-            exchange_list = get_exchange_pairs_for_market(market_name)
+            exchange_list = get_exchanges_for_market(market_name)
 
         self.exchange_list = exchange_list
         self.market_name = market_name

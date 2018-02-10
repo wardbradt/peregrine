@@ -33,6 +33,6 @@ print(opportunity)
 ```
 <sup>1</sup>Accepted arguments in place of "US" in this example are Austria, Australia, Bulgaria, Brazil, British Virgin Islands, Canada, China, Czech Republic, EU, Germany, Hong Kong, Iceland, India, Indonesia, Israel, Japan, Mexico, New Zealand, Panama, Philippines, Poland, Russia, Seychelles, Singapore, South Korea, St. Vincent & Grenadines, Sweden, Tanzania, Thailand, Turkey, UK, Ukraine, and Vietnam.
 ## To Do
-* Create a tool to identify which exchanges take abnormally long to respond to API requests.
 * Implement a fix to convert from USDT to USD and back again for markets based on USDT
 * Package for pip
+* Allow exchange objects (instead of exchange names) to be used as arguments for functions in several files (namely async_find_opportunities.py)

@@ -25,8 +25,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - Added `ccxt_errors` to several methods in async_build_markets.py
-- Moved classes `SingularlyAvailableExchangeError`, `SingularlyAvailableExchangeError`, and `get_exchange_pairs_for_market` from async_find_opportunities.py to utils.py so that they can be accessed from all files
-- Added (but did not implement) `from_json` argument to `get_exchange_pairs_for_market`
+- Moved classes `SingularlyAvailableExchangeError`, `SingularlyAvailableExchangeError`, and `get_exchanges_for_market` from async_find_opportunities.py to utils.py so that they can be accessed from all files
+- Added (but did not implement) `from_json` argument to `get_exchanges_for_market`
 
 ## [0.2.0] - 2018-02-05
 ### Added

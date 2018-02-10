@@ -13,14 +13,15 @@ class AsyncBellmanGraphInitializer:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(asyncio.gather(asyncio.ensure_future(self.exchange.load_markets())))
 
-        futures = [asyncio.ensure_future(self.process_market(market_name)) for market_name in
+        futures = [asyncio.ensure_future(self._process_market(market_name)) for market_name in
                    self.exchange.markets.keys()]
         loop.run_until_complete(asyncio.gather(*futures))
 
         return self.graph
 
-    async def process_market(self, market):
-        # todo: is there a benefit from differing bid and ask?
+    async def _process_market(self, market):
+        # todo: make bid and ask represent the different weights of the two parallel directed edges representing each
+        # market
         # for now, treating price as average of ask and bid
         ticker = await self.exchange.fetch_ticker(market)
         ticker_exchange_rate = (ticker['ask'] + ticker['bid']) / 2

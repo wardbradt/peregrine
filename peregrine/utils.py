@@ -13,8 +13,10 @@ class ExchangeNotInCollectionsError(Exception):
                                                             .format(market_ticker))
 
 
-def get_exchange_pairs_for_market(market_ticker):
-
+def get_exchanges_for_market(market_ticker):
+    """
+    Returns the list of exchanges on which a market is traded
+    """
     with open('collections/collections.json') as f:
         collections = json.load(f)
     for market_name, exchanges in collections.items():
