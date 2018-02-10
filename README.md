@@ -40,3 +40,4 @@ print(opportunity)
 ## Potential Enhancements
 * Create a data visualization
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities
+* Update cythonperegrine to reflect some of the changes to peregrine
