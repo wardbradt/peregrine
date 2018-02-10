@@ -2,9 +2,20 @@
 All notable changes to this project will be documented in this file. As this project was started for a class which requires I (wardbradt) record my daily changes, I will also daily record changes which may not be "notable."
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
-
+## [0.2.4] - 2018-02-08
+### Changed
+- Continued Bellman Ford development
+- Made Bellman Ford asynchronous
+## [0.2.4] - 2018-02-07
+### Added
+- Began to implement Bellman Ford algorithm
+### Changed
+- readme and glossary
 ## [0.2.3] - 2018-02-06
 ### Added
+- started js-dev branch
+- examples/restrict_collections_with_kwargs_dict_argument.py
+- glossary.md
 - build_collections
 - test_build_collections
 
