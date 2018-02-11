@@ -1,4 +1,5 @@
 import json
+import ccxt.async as ccxt
 
 
 class SingularlyAvailableExchangeError(Exception):
@@ -11,6 +12,12 @@ class ExchangeNotInCollectionsError(Exception):
     def __init__(self, market_ticker):
         super(ExchangeNotInCollectionsError, self).__init__("{} is either an invalid exchange or has a broken API."
                                                             .format(market_ticker))
+
+
+async def _get_exchange(exchange_name: str):
+    exchange = getattr(ccxt, exchange_name)()
+    await exchange.load_markets()
+    return exchange
 
 
 def get_exchanges_for_market(market_ticker):

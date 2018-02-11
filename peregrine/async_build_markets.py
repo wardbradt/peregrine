@@ -1,7 +1,8 @@
 import ccxt.async as ccxt
 import asyncio
 import json
-# import networkx as nx
+import networkx as nx
+from peregrine.utils import _get_exchange
 
 
 class CollectionBuilder:
@@ -38,10 +39,14 @@ class CollectionBuilder:
         return self.collections
 
     async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
-        exchange = await _get_exchange(exchange_name)
+        if ccxt_errors:
+            exchange = await _get_exchange(exchange_name)
+        else:
+            try:
+                exchange = await _get_exchange(exchange_name)
+            except ccxt.BaseError:
+                return
 
-        if exchange is None:
-            return
         for market_name in exchange.symbols:
             if market_name in self.collections:
                 self.collections[market_name].append(exchange_name)
@@ -50,12 +55,6 @@ class CollectionBuilder:
                 del self.singularly_available_markets[market_name]
             else:
                 self.singularly_available_markets[market_name] = exchange_name
-
-
-async def _get_exchange(exchange_name: str):
-    exchange = getattr(ccxt, exchange_name)()
-    await exchange.load_markets()
-    return exchange
 
 
 class ExchangeFailsCriteriaError(Exception):
@@ -114,9 +113,13 @@ class SpecificCollectionBuilder(CollectionBuilder):
                     raise ExchangeFailsCriteriaError()
 
     async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
-        exchange = await _get_exchange(exchange_name)
-        if exchange is None:
-            return
+        if ccxt_errors:
+            exchange = await _get_exchange(exchange_name)
+        else:
+            try:
+                exchange = await _get_exchange(exchange_name)
+            except ccxt.BaseError:
+                return
 
         # Implicitly (and intentionally) does not except ValueErrors raised by check_exchange_meets_criteria
         try:
@@ -142,9 +145,7 @@ class ExchangeGraphBuilder:
         self.graph is a a dict representing a graph. Each key is a currency base symbol c representing a graph
         node. Each value is a dict d. In d, every key represents a quote currency q for c.
         Each value of q in d is a dict f. in f, each key is an exchange and each value is the name of the market
-        (either c/q or q/c). ...(The two following sentences are false, here so they will not have to be typed again
-        later when a similar feature is implemented: Each node has at least two edges. The node(s) which share(s) these
-        edges must  also have at least two edges.)...
+        (either c/q or q/c).
         The following is a visualization of self.collections:
 
         {base_currency:
@@ -168,7 +169,7 @@ class ExchangeGraphBuilder:
         This example would occur when USD has only been encountered once.
         """
         self.exchanges = exchanges
-        self.graph = {}
+        self.graph = nx.MultiGraph()
 
     def build_graph(self, write=False, ccxt_errors=False):
         futures = [asyncio.ensure_future(self._add_exchange_to_graph(exchange_name, ccxt_errors)) for
@@ -197,28 +198,9 @@ class ExchangeGraphBuilder:
                 return
 
         for market_name in exchange.symbols:
-            base_currency, quote_currency = market_name.split('/')
+            currencies = market_name.split('/')
 
-            # if a base_currency vs. quote_currency market has been previously encountered
-            similar_market_encountered = True
-            if base_currency not in self.graph:
-                self.graph[base_currency] = {}
-                self.graph[base_currency][quote_currency] = {exchange_name: market_name}
-                similar_market_encountered = False
-            elif quote_currency not in self.graph[base_currency]:
-                self.graph[base_currency][quote_currency] = {exchange_name: market_name}
-                similar_market_encountered = False
-            # if base_currency in graph and a base_currency vs. quote_currency market has been previously encountered
-            else:
-                self.graph[base_currency][quote_currency][exchange_name] = market_name
-
-            if quote_currency not in self.graph:
-                self.graph[quote_currency] = {}
-                self.graph[quote_currency][base_currency] = {exchange_name: market_name}
-            elif not similar_market_encountered:
-                self.graph[quote_currency][base_currency] = {exchange_name: market_name}
-            else:
-                self.graph[quote_currency][base_currency][exchange_name] = market_name
+            self.graph.add_edge(currencies[0], currencies[1], exchange_name=exchange_name, market_name=market_name)
 
 
 def build_graph_for_exchanges(exchanges: list):
@@ -228,6 +210,20 @@ def build_graph_for_exchanges(exchanges: list):
     :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
     """
     return ExchangeGraphBuilder(exchanges).build_graph()
+
+
+def build_arbitrage_graph_for_exchanges(exchanges: list, k_core=2):
+    """
+    This function is currently inefficient as it finds the entire graph for the given exchanges then finds the k-core
+    for that graph. todo: It would be great if someone could improve the efficiency of it but this is not a priority.
+
+    IMPORTANT: For this function to work, the @not_implemented_for('multigraph') decorator above the core_number
+    function in networkx.algorithms.core.py must be removed or commented out.
+    Todo: Improve this project so that the above does not have to be done.
+
+    :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
+    """
+    return nx.k_core(build_graph_for_exchanges(exchanges), k_core)
 
 
 def build_collections(blacklist=False, write=True, ccxt_errors=False):
