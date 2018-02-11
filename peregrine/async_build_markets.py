@@ -1,6 +1,8 @@
 import ccxt.async as ccxt
 import asyncio
 import json
+import networkx as nx
+from peregrine.utils import _get_exchange
 
 
 class CollectionBuilder:
@@ -37,9 +39,14 @@ class CollectionBuilder:
         return self.collections
 
     async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
-        exchange = await _get_exchange(exchange_name, ccxt_errors)
-        if exchange is None:
-            return
+        if ccxt_errors:
+            exchange = await _get_exchange(exchange_name)
+        else:
+            try:
+                exchange = await _get_exchange(exchange_name)
+            except ccxt.BaseError:
+                return
+
         for market_name in exchange.symbols:
             if market_name in self.collections:
                 self.collections[market_name].append(exchange_name)
@@ -48,24 +55,6 @@ class CollectionBuilder:
                 del self.singularly_available_markets[market_name]
             else:
                 self.singularly_available_markets[market_name] = exchange_name
-
-
-async def _get_exchange(exchange_name: str, ccxt_errors=False):
-    """
-    :param ccxt_errors: if true, raises errors ccxt raises when calling load_markets. The common ones are
-    RequestTimeout and ExchangeNotAvailable, which are caused by problems with exchanges' APIs.
-    """
-    exchange = getattr(ccxt, exchange_name)()
-
-    if ccxt_errors:
-        await exchange.load_markets
-    else:
-        try:
-            await exchange.load_markets()
-        except ccxt.BaseError:
-            return None
-
-    return exchange
 
 
 class ExchangeFailsCriteriaError(Exception):
@@ -124,9 +113,13 @@ class SpecificCollectionBuilder(CollectionBuilder):
                     raise ExchangeFailsCriteriaError()
 
     async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
-        exchange = await _get_exchange(exchange_name, ccxt_errors)
-        if exchange is None:
-            return
+        if ccxt_errors:
+            exchange = await _get_exchange(exchange_name)
+        else:
+            try:
+                exchange = await _get_exchange(exchange_name)
+            except ccxt.BaseError:
+                return
 
         # Implicitly (and intentionally) does not except ValueErrors raised by check_exchange_meets_criteria
         try:
@@ -145,17 +138,15 @@ class SpecificCollectionBuilder(CollectionBuilder):
                 self.singularly_available_markets[market_name] = exchange_name
 
 
-class ExchangeCurrencyBuilder:
+class ExchangeGraphBuilder:
 
-    def __init__(self, symbol):
+    def __init__(self, exchanges: list):
         """
-        THIS CLASS IS CURRENTLY IN DEVELOPMENT. IT DOES NOT WORK.
-
         self.graph is a a dict representing a graph. Each key is a currency base symbol c representing a graph
-        node. Each node has at least two edges. The node(s) which share(s) these edges must also have at least two
-        edges. This is because a node which connects to only   Each value is a dict d. In d, every key represents a quote currency q for c. each value of q in d is a
-        dict f. in f, each key is an exchange and each value is the name of the market (either c/q or q/c). The
-        following is a visualization of self.collections:
+        node. Each value is a dict d. In d, every key represents a quote currency q for c.
+        Each value of q in d is a dict f. in f, each key is an exchange and each value is the name of the market
+        (either c/q or q/c).
+        The following is a visualization of self.collections:
 
         {base_currency:
             {quote_currency_a:
@@ -176,16 +167,12 @@ class ExchangeCurrencyBuilder:
         'USD': {'exchange_name': 'bittrex', 'market_name': 'BTC/USD'}
 
         This example would occur when USD has only been encountered once.
-
-        :param symbol: A currency symbol (e.g. USD, BTC, XRP)
         """
-        self.symbol = symbol
-        self.exchanges = ccxt.exchanges
-        self.graph = {}
-        self.singularly_available_currencies = {}
+        self.exchanges = exchanges
+        self.graph = nx.MultiGraph()
 
-    def build_all_collections(self, write=False, ccxt_errors=False):
-        futures = [asyncio.ensure_future(self._add_exchange_to_collections(exchange_name, ccxt_errors)) for
+    def build_graph(self, write=False, ccxt_errors=False):
+        futures = [asyncio.ensure_future(self._add_exchange_to_graph(exchange_name, ccxt_errors)) for
                    exchange_name in self.exchanges]
         asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
 
@@ -193,96 +180,50 @@ class ExchangeCurrencyBuilder:
             with open('collections/graph.json', 'w') as outfile:
                 json.dump(self.graph, outfile)
 
-            with open('collections/singularly_available_currencies.json', 'w') as outfile:
-                json.dump(self.singularly_available_currencies, outfile)
-
         return self.graph
 
-    def add_sac(self, currency, exchange_name, market_name):
-        self.singularly_available_currencies[currency] = {}
-        self.singularly_available_currencies[currency]['exchange_name'] = exchange_name
-        self.singularly_available_currencies[currency]['market_name'] = market_name
-
-    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
+    async def _add_exchange_to_graph(self, exchange_name: str, ccxt_errors=False):
         """
-        Never connect to a node that does not exist. If a cryptocurrency is available on only one market on one
-        exchange, it should not be added to graph.
-
         THIS METHOD DOES NOT CURRENTLY WORK. IT, ALONG WITH THE REST OF THE CLASS, IS IN DEVELOPMENT.
+
+        :param ccxt_errors: if true, raises errors ccxt raises when calling load_markets. The common ones are
+        RequestTimeout and ExchangeNotAvailable, which are caused by problems with exchanges' APIs.
         """
-        exchange = await _get_exchange(exchange_name, ccxt_errors)
-        if exchange is None:
-            return
+        if ccxt_errors:
+            exchange = await _get_exchange(exchange_name)
+        else:
+            try:
+                exchange = await _get_exchange(exchange_name)
+            except ccxt.BaseError:
+                return
 
-        quote_currency_in_graph = None
         for market_name in exchange.symbols:
-            base_currency, quote_currency = market_name.split("/")
+            currencies = market_name.split('/')
 
-            # if base_currency or quote_currency have not yet been encountered, add the un-encountered to
-            # self.singularly_available_currencies and ignore this market
-            if base_currency not in self.graph:
-                # if base_currency has been encountered before
-                if base_currency in self.singularly_available_currencies:
-                    # if quote_currency not in self.graph, do nothing because it is a sac and nodes for SACs should not
-                    # be added to the graph
-                    if quote_currency not in self.graph:
-                        self.add_sac(quote_currency, exchange_name, market_name)
-                        continue
-                    else:
-                        # it is known that quote_currency in self.graph. set quote_currency_in_graph = True so it
-                        # doesn't have to be called later.
-                        quote_currency_in_graph = True
-                        # else, add base_currency to self.graph and remove from self.singularly_available_currencies
-                        self.graph[base_currency] = {}
-                        self.graph[base_currency][quote_currency] = {exchange_name: market_name}
-
-                        popped_base = self.singularly_available_currencies.pop(base_currency)
-
-                        # the quote currency from the first time base currency was encountered
-                        # todo: does this modify popped_base['market_name']? if so, this will cause errors.
-                        popped_base_quote = popped_base['market_name'].replace(base_currency, '').strip('/')
-
-                        # edge case: if the first time base_currency was encountered it was against quote_currency
-                        if popped_base_quote == quote_currency:
-                            self.graph[base_currency][quote_currency][popped_base['exchange_name']] = market_name
-                        # else: need to instantiate [base_currency][popped_base_quote] as a dict first
-                        else:
-                            self.graph[base_currency][popped_base_quote] = {}
-                            self.graph[base_currency][popped_base_quote][popped_base['exchange_name']] = \
-                                popped_base['market_name']
-                # if this is the first time encountering base_currency
-                else:
-
-                    pass
-            # both quote_currency and base_currency in self.graph
-            else:
-                if quote_currency in self.graph[base_currency]:
-                    self.graph[base_currency][quote_currency][exchange_name] = market_name
-                # have not yet encountered a market where base_currency and quote_currency are traded against each
-                # other, so ignore this market
-                # else:
+            self.graph.add_edge(currencies[0], currencies[1], exchange_name=exchange_name, market_name=market_name)
 
 
-def get_exchanges_for_currency(symbol):
+def build_graph_for_exchanges(exchanges: list):
     """
-    DOES NOT WORK YET
-    
-    Returns a dict where each key is the name of an exchange e which has symbol as the base or quote currency on at
-    least one market and each value is the list of markets on e where symbol is a base or quote currency.
-    :param symbol: A currency symbol (e.g. USD, BTC, XRP)
+    A wrapper function for the usage of the ExchangeGraphBuilder class which returns a dict as specified in the
+    docstring of __init__ in ExchangeGraphBuilder.
+    :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
     """
-    with open('collections/collections.json') as f:
-        collections = json.load(f)
+    return ExchangeGraphBuilder(exchanges).build_graph()
 
-    passed_exchanges = []
-    # for market_name, exchanges in collections.items():
-    #     base, quote = market_name.split('/')
-    #     if base == symbol:
-    #         pass
-    #     elif quote == symbol:
-    #
-    #     if market_name == market_ticker:
-    #         return exchanges
+
+def build_arbitrage_graph_for_exchanges(exchanges: list, k_core=2):
+    """
+    This function is currently inefficient as it finds the entire graph for the given exchanges then finds the k-core
+    for that graph. todo: It would be great if someone could improve the efficiency of it but this is not a priority.
+
+    IMPORTANT: For this function to work, the @not_implemented_for('multigraph') decorator above the core_number
+    function in networkx.algorithms.core.py must be removed or commented out.
+    Todo: Improve this project so that the above does not have to be done.
+
+    :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
+    """
+    return nx.k_core(build_graph_for_exchanges(exchanges), k_core)
 
 
 def build_collections(blacklist=False, write=True, ccxt_errors=False):
