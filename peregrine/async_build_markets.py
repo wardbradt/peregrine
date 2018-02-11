@@ -141,33 +141,6 @@ class SpecificCollectionBuilder(CollectionBuilder):
 class ExchangeGraphBuilder:
 
     def __init__(self, exchanges: list):
-        """
-        self.graph is a a dict representing a graph. Each key is a currency base symbol c representing a graph
-        node. Each value is a dict d. In d, every key represents a quote currency q for c.
-        Each value of q in d is a dict f. in f, each key is an exchange and each value is the name of the market
-        (either c/q or q/c).
-        The following is a visualization of self.collections:
-
-        {base_currency:
-            {quote_currency_a:
-                {exchange_one: base_currency/quote_currency_a, exchange_two: quote_currency_a/base_currency}
-            }
-            {quote_currency_b:
-                {exchange_one: quote_currency_b/base_currency, exchange_three: base_currency/quote_currency_b}
-            }
-            {quote_currency_c:
-                {exchange_four: quote_currency_c/base_currency, exchange_two: base_currency/quote_currency_c}
-            }
-        }
-
-        self.singularly_available_currencies (sac) is a dict. in it, each key is a currency which has been found on
-        only one market across all exchanges and thus cannot be arbitraged. each value is a dict with two elements
-        'exchange' and 'market'. an example key/value pair in sac would look like:
-
-        'USD': {'exchange_name': 'bittrex', 'market_name': 'BTC/USD'}
-
-        This example would occur when USD has only been encountered once.
-        """
         self.exchanges = exchanges
         self.graph = nx.MultiGraph()
 
@@ -184,8 +157,6 @@ class ExchangeGraphBuilder:
 
     async def _add_exchange_to_graph(self, exchange_name: str, ccxt_errors=False):
         """
-        THIS METHOD DOES NOT CURRENTLY WORK. IT, ALONG WITH THE REST OF THE CLASS, IS IN DEVELOPMENT.
-
         :param ccxt_errors: if true, raises errors ccxt raises when calling load_markets. The common ones are
         RequestTimeout and ExchangeNotAvailable, which are caused by problems with exchanges' APIs.
         """
