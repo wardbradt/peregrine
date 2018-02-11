@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. As this project was started for a class which requires I (wardbradt) record my daily changes, I will also daily record changes which may not be "notable."
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
+## [0.2.5] - 2018-02-11
+### Added
+- Created ExchangeGraphBuilder
+- Researched Networkx
+- Did some graph theory research (mainly on k-core and multigraphs)
+- Tests
+### Changed
+- Moved `_get_exchange` to utils
+- test_build_collections.py to test_build_markets.py
 ## [0.2.4] - 2018-02-08
 ### Changed
 - Continued Bellman Ford development
