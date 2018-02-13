@@ -23,7 +23,10 @@ class AsyncBellmanGraphInitializer:
         # todo: make bid and ask represent the different weights of the two parallel directed edges representing each
         # market
         # for now, treating price as average of ask and bid
-        ticker = await self.exchange.fetch_ticker(market)
+        try:
+            ticker = await self.exchange.fetch_ticker(market)
+        except ccxt.ExchangeNotAvailable:
+            return
         ticker_exchange_rate = (ticker['ask'] + ticker['bid']) / 2
 
         # prevent math error when Bittrex (GEO/BTC) or other API gives 0 as ticker price
