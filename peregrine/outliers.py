@@ -2,7 +2,7 @@ import ccxt.async as ccxt
 import asyncio
 import time
 import numpy as np
-from peregrine.utils import get_exchanges_for_market
+from utils import get_exchanges_for_market
 
 
 class OutlierDetector:

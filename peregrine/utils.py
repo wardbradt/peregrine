@@ -1,5 +1,7 @@
 import json
 import ccxt.async as ccxt
+import networkx as nx
+from subprocess import check_call
 
 
 class SingularlyAvailableExchangeError(Exception):
@@ -12,6 +14,11 @@ class ExchangeNotInCollectionsError(Exception):
     def __init__(self, market_ticker):
         super(ExchangeNotInCollectionsError, self).__init__("{} is either an invalid exchange or has a broken API."
                                                             .format(market_ticker))
+
+
+def draw_graph_to_file(graph, dot_name: str, to_file: str):
+    nx.drawing.nx_pydot.write_dot(graph, dot_name + '.dot')
+    check_call(['dot', '-Tpng', dot_name + '.dot', '-o', to_file])
 
 
 async def _get_exchange(exchange_name: str):

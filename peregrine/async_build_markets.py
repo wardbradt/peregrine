@@ -2,16 +2,13 @@ import ccxt.async as ccxt
 import asyncio
 import json
 import networkx as nx
-from peregrine.utils import _get_exchange
+from utils import _get_exchange
 
 
 class CollectionBuilder:
 
     def __init__(self):
         all_exchanges = ccxt.exchanges
-        # bter frequently has a broken API and flowbtc and yunbi always throw request timeouts.
-        # [all_exchanges.remove(exchange_name) if exchange_name in all_exchanges else None for exchange_name in
-        # ['bter', 'flowbtc', 'yunbi']]
         self.exchanges = all_exchanges
         # keys are market names and values are an array of names of exchanges which support that market
         self.collections = {}
@@ -171,7 +168,11 @@ class ExchangeGraphBuilder:
         for market_name in exchange.symbols:
             currencies = market_name.split('/')
 
-            self.graph.add_edge(currencies[0], currencies[1], exchange_name=exchange_name, market_name=market_name)
+            try:
+                self.graph.add_edge(currencies[0], currencies[1], exchange_name=exchange_name, market_name=market_name)
+            # certain exchanges (lykke, possibly more)
+            except IndexError as e:
+                pass
 
 
 def build_graph_for_exchanges(exchanges: list):
