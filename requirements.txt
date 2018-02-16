@@ -18,6 +18,8 @@ MarkupSafe==1.0
 multidict==4.1.0
 networkx==2.1
 pycares==2.3.0
+pydot==1.2.4
+pyparsing==2.2.0
 requests==2.18.4
 urllib3==1.22
 Werkzeug==0.14.1
