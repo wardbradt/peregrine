@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file. As this pro
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 ## [0.2.5] - 2018-02-11
 ### Added
-- Created ExchangeGraphBuilder
+- Created ExchangeMultiGraphBuilder
 - Researched Networkx
 - Did some graph theory research (mainly on k-core and multigraphs)
 - Tests

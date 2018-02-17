@@ -91,7 +91,7 @@ class SpecificCollectionBuilder(CollectionBuilder):
                     raise ValueError("Exchange attribute {} is a list of {}s. "
                                      "A non-{} object was passed.".format(key, str(type_of_actual_value),
                                                                           str(type_of_actual_value)))
-                # Note, this line is A XOR B where A is self.blacklist and B is desired_value not in actual_value
+                # this line is A XOR B where A is self.blacklist and B is desired_value not in actual_value
                 if self.blacklist != (desired_value not in actual_value):
                     raise ExchangeFailsCriteriaError()
             elif isinstance(actual_value, dict):
@@ -135,13 +135,13 @@ class SpecificCollectionBuilder(CollectionBuilder):
                 self.singularly_available_markets[market_name] = exchange_name
 
 
-class ExchangeGraphBuilder:
+class ExchangeMultiGraphBuilder:
 
     def __init__(self, exchanges: list):
         self.exchanges = exchanges
         self.graph = nx.MultiGraph()
 
-    def build_graph(self, write=False, ccxt_errors=False):
+    def build_multi_graph(self, write=False, ccxt_errors=False):
         futures = [asyncio.ensure_future(self._add_exchange_to_graph(exchange_name, ccxt_errors)) for
                    exchange_name in self.exchanges]
         asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
@@ -175,13 +175,13 @@ class ExchangeGraphBuilder:
                 pass
 
 
-def build_graph_for_exchanges(exchanges: list):
+def build_multi_graph_for_exchanges(exchanges: list):
     """
-    A wrapper function for the usage of the ExchangeGraphBuilder class which returns a dict as specified in the
-    docstring of __init__ in ExchangeGraphBuilder.
+    A wrapper function for the usage of the ExchangeMultiGraphBuilder class which returns a dict as specified in the
+    docstring of __init__ in ExchangeMultiGraphBuilder.
     :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
     """
-    return ExchangeGraphBuilder(exchanges).build_graph()
+    return ExchangeMultiGraphBuilder(exchanges).build_multi_graph()
 
 
 def build_arbitrage_graph_for_exchanges(exchanges: list, k_core=2):
@@ -195,7 +195,7 @@ def build_arbitrage_graph_for_exchanges(exchanges: list, k_core=2):
 
     :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
     """
-    return nx.k_core(build_graph_for_exchanges(exchanges), k_core)
+    return nx.k_core(build_multi_graph_for_exchanges(exchanges), k_core)
 
 
 def build_collections(blacklist=False, write=True, ccxt_errors=False):
