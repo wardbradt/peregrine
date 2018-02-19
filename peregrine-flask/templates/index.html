@@ -6,40 +6,68 @@
   <link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,700" rel="stylesheet">
 </head>
 <body style="font-family: 'Ubuntu', sans-serif;">
-  <div style="height: 100vh; background: linear-gradient(rgba(0,0, 0,0.3), rgba(0,0, 0,0.3)), url('http://hacknehs.com/assets/images/mountain.jpg'); background-size: cover; background-position: center; color: white; font-size: 200%; font-weight: 700">
-    <div class="container text-center" style="padding-top: 10vh">
-      <form id="form" action="" method="post">
+  <div style="height: 100vh;
+  background: linear-gradient(rgba(0,0, 0,1.0), rgba(0,0, 0,1.0)), url('http://hacknehs.com/assets/images/mountain.jpg');
+  background-size: cover; background-position: center;
+  display: flex; flex-direction: column; justify-content: center;  color: white; font-size: 150%
+  font-weight: 700">
+  <div class="container text-center" style="">
+    <form id="form" action="" method="post">
 
-        <div class="form-group" style="color: #888;">
-          <select id="exchange" name='exchange' multiple class="form-control">
-            {% for exchange in exchange_list %}
+      <div class="form-group" style="color: #888;">
+        <select id="exchange" name='exchange' multiple class="form-control" style="height: 200px;">
+          {% for exchange in exchange_list %}
+          <option>{{ exchange }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-              <option>{{ exchange }}</option>
-              {% endfor %}
-          </select>
-        </div>
+      <div class="form-group">
+        <input type="submit" class="btn btn-block btn-primary" value="Submit" />
+      </div>
 
-        <div class="form-group">
-          <input type="submit" class="btn btn-block btn-primary" value="Submit" />
-        </div>
-
-      </form>
-    </div>
-    <div class="container text-center" style="padding-top: 30vh">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-      <ul style="list-style: none">
-        {% for message in messages %}
-        <li style="font-size: 300%">{{ message[1] }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-      {% endwith %}
-    </div>
+    </form>
   </div>
-  <div class="text-center container" style="min-height: 300px; margin-top: 60px">
-    <h1>How Categorizer Works</h1>
-    <p>Input the raw text or description of a science article in the textbook, and the algorithm will categorize it as <b>artificial Intelligence<b>, <b>science policy</b>,  <b>neuroscience</b>, <b>pharmaceuticals</b>, <b>environmental science</b>, or <b>immunology</b>.</p>
+  <div class="container text-center" style="padding-top: 5vh">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <ul style="list-style: none">
+      {% for message in messages %}
+      <li style="font-size: 300%">{{ message[1] }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
   </div>
+  <div class="container text-center" style="padding-top: 5vh">
+    <img src="{{ image_path }}" style="width: 100%" id="img">
+  </div>
+</div>
+<script>
+function refresh(node)
+{
+   var times = 3000; // gap in Milli Seconds;
+
+   (function startRefresh()
+   {
+      var address;
+      if(node.src.indexOf('?')>-1)
+       address = node.src.split('?')[0];
+      else
+       address = node.src;
+      node.src = address+"?time="+new Date().getTime();
+
+      setTimeout(startRefresh,times);
+   })();
+
+}
+
+window.onload = function()
+{
+  var node = document.getElementById('img');
+  refresh(node);
+  // you can refresh as many images you want just repeat above steps
+}
+</script>
 </body>
 </html>
