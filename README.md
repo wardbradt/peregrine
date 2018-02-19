@@ -1,7 +1,9 @@
-# peregrine-scout
+# Peregrine
 Detects arbitrage opportunities across 93 cryptocurrency markets in 34 countries
 
 An extension of the asynchronous feature set of the [CCXT](https://github.com/ccxt/ccxt/) cryptocurrency trading library offering a Python and a Cython version
+
+In order to use the features that implement [Networkx](https://github.com/networkx/networkx), you must use [my fork](https://github.com/wardbradt/networkx) to avoid errors.
 
 ## Example Usage
 ```
@@ -12,7 +14,7 @@ print(opportunity)
 ```
 At the time of writing, this prints the following in less than one second.
 ```
-{'highest_bid': {'exchange': <ccxt.async.lakebtc.lakebtc object at 0x10ea50518>, 'amount': 11750.59}, 
+{'highest_bid': {'exchange': <ccxt.async.lakebtc.lakebtc object at 0x10ea50518>, 'amount': 11750.59},
 'lowest_ask': {'exchange': <ccxt.async.gdax.gdax object at 0x10ea50400>, 'amount': 8450.01}}
 ```
 If you want to specify which exchanges to find opportunities on:
