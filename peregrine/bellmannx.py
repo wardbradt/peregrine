@@ -62,21 +62,6 @@ def calculate_profit_ratio_for_path(graph, path):
             start = path[i]
             end = path[i + 1]
             # todo: rate should not have to be inversed
-            rate = 1 / math.exp(-graph[start][end])
+            rate = math.exp(-graph[start][end])
             money *= rate
     return money
-
-
-def print_profit_opportunity_for_path(graph, path):
-    money = 100
-    print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
-
-    for i in range(len(path)):
-        if i + 1 < len(path):
-            start = path[i]
-            end = path[i + 1]
-            # todo: rate should not have to be inversed
-            rate = math.exp(-graph[start][end]['weight'])
-            money *= rate
-            print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
-                                                                    "money": money})

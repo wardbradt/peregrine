@@ -37,7 +37,6 @@ print(opportunity)
 * Package for pip
 * Allow exchange objects (instead of exchange names) to be used as arguments for functions in several files (namely async_find_opportunities.py)
 * Write better examples and unit tests
-* Make a utils directory instead of file, refactor functions into separate files (grouping by similarity)
 ## Potential Enhancements
 * Create data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities

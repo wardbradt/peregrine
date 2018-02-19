@@ -1,6 +1,6 @@
 import asyncio
-from peregrine.utils import load_exchange_graph
-from bellmannx import NegativeWeightFinder, print_profit_opportunity_for_path
+from peregrine.utils import load_exchange_graph, print_profit_opportunity_for_path
+from bellmannx import NegativeWeightFinder
 
 
 loop = asyncio.get_event_loop()

@@ -2,7 +2,7 @@ import ccxt.async as ccxt
 import asyncio
 import json
 import networkx as nx
-from utils import _get_exchange
+from utils.general import _get_exchange
 
 
 class CollectionBuilder:
