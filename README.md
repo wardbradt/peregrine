@@ -3,6 +3,8 @@ Detects arbitrage opportunities across 93 cryptocurrency markets in 34 countries
 
 An extension of the asynchronous feature set of the [CCXT](https://github.com/ccxt/ccxt/) cryptocurrency trading library offering a Python and a Cython version
 
+In order to use the features that implement [Networkx](https://github.com/networkx/networkx), you must use [my fork](https://github.com/wardbradt/networkx) to avoid errors.
+
 ## Example Usage
 ```
 from peregrine import get_opportunity_for_market
