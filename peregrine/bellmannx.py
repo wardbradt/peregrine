@@ -80,32 +80,3 @@ def print_profit_opportunity_for_path(graph, path):
             money *= rate
             print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
                                                                     "money": money})
-
-
-# G = load_exchange_graph('bittrex')
-# print(G)
-graph = nx.DiGraph()
-graph.add_edge(0, 1, weight=-math.log(2))
-graph.add_edge(1, 0, weight=math.log(2))
-
-graph.add_edge(1, 2, weight=-math.log(6/5))
-graph.add_edge(2, 1, weight=math.log(6/5))
-
-graph.add_edge(2, 0, weight=-math.log(7/12))
-graph.add_edge(0, 2, weight=math.log(7/12))
-
-graph.add_edge(1, 3, weight=-math.log(3))
-graph.add_edge(3, 1, weight=math.log(3))
-
-graph.add_edge(0, 3, weight=-math.log(3))
-graph.add_edge(3, 0, weight=math.log(3))
-
-n = NegativeWeightFinder(graph)
-path = n.bellman_ford(0)
-print_profit_opportunity_for_path(graph, path)
-
-
-# graph = create_exchange_graph(getattr(ccxt, 'bittrex')())
-#
-# path = NegativeWeightFinder(getattr(ccxt, 'bittrex')()).bellman_ford(0)
-# print(path)
