@@ -54,11 +54,12 @@ def create_weighted_multi_exchange_digraph(exchanges: list):
     graph = nx.MultiDiGraph()
     futures = [_add_exchange_to_multi_digraph(graph, exchange, log=True) for exchange in exchanges]
     loop.run_until_complete(asyncio.gather(*futures))
+    return graph
 
 
 async def _add_exchange_to_multi_digraph(graph: nx.MultiDiGraph, exchange: ccxt.Exchange, log=True):
     tasks = [_add_market_to_multi_digraph(exchange, symbol, graph, log=log) for symbol in exchange.symbols]
-    asyncio.wait(tasks)
+    await asyncio.wait(tasks)
 
 
 # todo: refactor. there is a lot of code repetition here with single_exchange.py's _add_market_to_multi_digraph
@@ -105,10 +106,6 @@ async def _add_market_to_multi_digraph(exchange: ccxt.Exchange, market_name: str
                        market_name=market_name,
                        exchange_name=exchange.id,
                        weight=1 / ticker_ask)
-
-
-async def _add_log_market_to_multi_digraph():
-    pass
 
 
 def multi_graph_to_log_graph(digraph: nx.MultiDiGraph):
