@@ -2,6 +2,22 @@
 All notable changes to this project will be documented in this file. As this project was started for a class which requires I (wardbradt) record my daily changes, I will also daily record changes which may not be "notable."
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
+[0.3.0b] - 2018-02-20
+### Added
+- Cross Exchange Bellman Ford (beta)
+
+## [0.2.6] - 2018-02-17 to 2018-02-19
+### Added
+- Bellman Ford algorithm for Networkx graphs
+- Beta Visualization Website (Thanks to @ksun0)
+### Changed
+- Refactored utils
+- Added `edge_bunches` for Networkx (Available at [wardbradt/networkx](https://github.com/wardbradt/networkx))
+- Deprecated bellman.py
+- ExchangeGraphBuilder to ExchangeMultiGraphBuilder
+### Removed
+- SingularlyAvailableExchangeError
+
 ## [0.2.5] - 2018-02-11
 ### Added
 - Created ExchangeMultiGraphBuilder

@@ -39,10 +39,9 @@ def create_multi_exchange_graph(exchanges: list, digraph=False):
     return graph
 
 
-def create_weighted_multi_exchange_digraph(exchanges: list):
+def create_weighted_multi_exchange_digraph(exchanges: list, log=False):
     """
     Not optimized
-    :param exchanges:
     """
     for i in range(len(exchanges)):
         exchanges[i] = getattr(ccxt, exchanges[i])()
@@ -52,7 +51,7 @@ def create_weighted_multi_exchange_digraph(exchanges: list):
     loop.run_until_complete(asyncio.gather(*futures))
 
     graph = nx.MultiDiGraph()
-    futures = [_add_exchange_to_multi_digraph(graph, exchange, log=True) for exchange in exchanges]
+    futures = [_add_exchange_to_multi_digraph(graph, exchange, log=log) for exchange in exchanges]
     loop.run_until_complete(asyncio.gather(*futures))
     return graph
 

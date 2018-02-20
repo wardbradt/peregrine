@@ -40,6 +40,6 @@ print(opportunity)
 * Allow exchange objects (instead of exchange names) to be used as arguments for functions in several files (namely async_find_opportunities.py)
 * Write better examples and unit tests
 ## Potential Enhancements
-* Create data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
+* Create (better) data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities
 * Update cythonperegrine to reflect some of the changes to peregrine

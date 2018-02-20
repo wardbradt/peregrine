@@ -3,6 +3,14 @@ import ccxt.async as ccxt
 import asyncio
 
 
+#############################################################
+# This file is deprecated in favor of bellmannx.py. However,
+# because the script in this file is more low level and some
+# prefer it, it remains in the repository. Feel free to
+# contribute to it as you wish.
+#############################################################
+
+
 class AsyncBellmanGraphInitializer:
 
     def __init__(self, exchange: ccxt.Exchange):
@@ -12,35 +20,46 @@ class AsyncBellmanGraphInitializer:
     def initialize_completed_graph_for_exchange(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(asyncio.gather(asyncio.ensure_future(self.exchange.load_markets())))
-
         futures = [asyncio.ensure_future(self._process_market(market_name)) for market_name in
                    self.exchange.markets.keys()]
         loop.run_until_complete(asyncio.gather(*futures))
 
         return self.graph
 
-    async def _process_market(self, market):
-        # todo: make bid and ask represent the different weights of the two parallel directed edges representing each
-        # market
-        # for now, treating price as average of ask and bid
+    async def _process_market(self, market: str):
         try:
             ticker = await self.exchange.fetch_ticker(market)
-        except ccxt.ExchangeNotAvailable:
+        except ccxt.BaseError:
             return
-        ticker_exchange_rate = (ticker['ask'] + ticker['bid']) / 2
+        # any error is solely because of fetch_ticker
+        except Exception:
+            return
+        try:
+            # todo: make bid and ask represent the different weights of the two parallel directed edges representing
+            # each market
+            # for now, treating price as average of ask and bid
+            # can sell for bid, can buy for ask.
+            ticker_exchange_rate = (ticker['ask'] + ticker['bid']) / 2
+        # ask and bid == None if this market is non existent.
+        except TypeError:
+            return
 
         # prevent math error when Bittrex (GEO/BTC) or other API gives 0 as ticker price
         if ticker_exchange_rate == 0:
             return
 
-        conversion_rate = -math.log(ticker_exchange_rate)
-        base_currency, quote_currency = market.split('/')
+        try:
+            base_currency, quote_currency = market.split('/')
+        # if ccxt returns a market in incorrect format (e.g FX_BTC_JPY on BitFlyer)
+        except ValueError:
+            return
 
         if base_currency not in self.graph:
             self.graph[base_currency] = {}
         if quote_currency not in self.graph:
             self.graph[quote_currency] = {}
 
+        conversion_rate = -math.log(ticker_exchange_rate)
         self.graph[base_currency][quote_currency] = conversion_rate
         self.graph[quote_currency][base_currency] = -conversion_rate
 
@@ -86,6 +105,14 @@ def relax(base_currency, quote_currency, graph, distance_to, predecessor):
 
 
 def bellman_ford(graph, source):
+    """
+    todo: write the intended format for graph
+    :param graph:
+    :param source: The node in graph from which the values in distance_to will be calculated.
+    :return: two dicts, the first of which is distance_to, which stores the shortest distance from source to each node
+    in the graph. Each value in distance_to is initialized to float('Inf'). The second dict is predecessor, which, for
+    each node in graph, stores the node immediately preceding it on the shortest path to it.
+    """
     distance_to, predecessor = initialize(graph, source)
     # After len(graph) - 1 passes, algorithm is complete.
     for i in range(len(graph) - 1):
@@ -159,3 +186,25 @@ def get_all_paths_for_graph(graph: dict):
     for source_node in graph.keys():
         paths.append(bellman_ford(graph, source_node))
     return paths
+
+
+def bellman_all_exchanges_example():
+    paths = {}
+    exchanges = [exchange for exchange in ccxt.exchanges if 'US' in getattr(ccxt, exchange)().countries]
+    for exchange_name in exchanges:
+        try:
+            initializer = AsyncBellmanGraphInitializer(getattr(ccxt, exchange_name)())
+            graph = initializer.initialize_completed_graph_for_exchange()
+        except ccxt.BaseError:
+            continue
+
+        if len(graph.keys()) > 0:
+            path = get_path_from_node(graph, list(graph.keys())[0])
+        else:
+            continue
+        if path is None:
+            print(exchange_name + " has no negative weight cycles")
+            continue
+        paths[exchange_name] = {'profit_ratio': calculate_profit_ratio_for_path(graph, path), 'path': str(path)}
+        print(exchange_name + " " + str(paths[exchange_name]))
+    print(paths)
