@@ -2,6 +2,17 @@
 All notable changes to this project will be documented in this file. As this project was started for a class which requires I (wardbradt) record my daily changes, I will also daily record changes which may not be "notable."
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
+## [0.3.2b] - 2018-02-20
+### Added
+- Explicit python decorator to README pre-formatted blocks
+- Edge bunch definition to glossary.md
+- examples/find_opportunity_for_one_coin_across_exchanges.py
+- Reformatted README examples
+- Two to-dos in README
+### Changed
+- Added some imports to __init__.py files
+- Marked some functions in bellman_multi_graph.py as protected
+
 ## [0.3.1b] - 2018-02-20
 ### Changed
 - __init__.py files
@@ -73,7 +84,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - Examples directory (/examples)
 - First speed comparison (in /examples)
 - `calculate_time` in examples/calculate_time.py, a utility for measuring the speed of functions
-- type aliases to some function declarations in peregrine/
+- Type aliases to some function declarations in peregrine/
 
 ### Removed
 - Unnecessary print statement at start of async_find_opportunities.py

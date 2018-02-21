@@ -59,7 +59,7 @@ class NegativeWeightFinderMulti:
         # The distance from any node to (itself) == 0
         self.distance_to[source] = 0
 
-    def first_iteration(self):
+    def _first_iteration(self):
         futures = [asyncio.ensure_future(self._process_edge_bunch(edge_bunch))
                    for edge_bunch in self.graph.edge_bunches(data=True)]
         asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
@@ -100,7 +100,7 @@ class NegativeWeightFinderMulti:
         self.initialize(source)
 
         # on first iteration, load market prices.
-        self.first_iteration()
+        self._first_iteration()
 
         # After len(graph) - 1 passes, algorithm is complete.
         for i in range(1, len(self.new_graph) - 1):
@@ -113,17 +113,14 @@ class NegativeWeightFinderMulti:
 
         for edge in self.new_graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                return retrace_negative_loop(self.predecessor, source)
+                return _retrace_negative_loop(self.predecessor, source)
 
         return None
 
 
-def retrace_negative_loop(predecessor, start):
+def _retrace_negative_loop(predecessor, start):
     """
     Does not currently work as a node may be encountered more than once.
-    :param predecessor:
-    :param start:
-    :return:
     """
     arbitrage_loop = [start]
     next_node = start
@@ -141,19 +138,7 @@ def bellman_ford(graph: nx.MultiGraph, source):
     return NegativeWeightFinderMulti(graph).bellman_ford(source)
 
 
-def calculate_profit_ratio_for_path(graph, path):
-    money = 1
-    for i in range(len(path)):
-        if i + 1 < len(path):
-            start = path[i]
-            end = path[i + 1]
-            # todo: rate should not have to be inversed
-            rate = math.exp(-graph[start][end]['weight'])
-            money *= rate
-    return money
-
-
-def print_profit_opportunity_for_path(graph, path):
+def print_profit_opportunity_for_path(graph: nx.MultiGraph, path):
     money = 100
     print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
 
@@ -163,7 +148,7 @@ def print_profit_opportunity_for_path(graph, path):
             end = path[i + 1]
             x = graph[start]
             y = x[end][0]
-            # todo: we should not have to add [0] to this. it should simply be [start][end][0]['weight'].
+            # todo: we should not have to add [0] to this. it should simply be [start][end]['weight'].
             rate = math.exp(-graph[start][end][0]['weight'])
             money *= rate
             print("{} to {} at {} = {} on {} for {}".format(start, end, rate, money,

@@ -61,7 +61,6 @@ def calculate_profit_ratio_for_path(graph, path):
         if i + 1 < len(path):
             start = path[i]
             end = path[i + 1]
-            # todo: rate should not have to be inversed
             rate = math.exp(-graph[start][end])
             money *= rate
     return money
