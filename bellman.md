@@ -3,7 +3,7 @@ This document is a reference for how Bellman-Ford works.
 
 A visual demonstration of Bellman Ford can be found [here](https://algs4.cs.princeton.edu/lectures/44DemoBellmanFord.pdf).
 
-An explanation of the algorithm can be found [here](https://algs4.cs.princeton.edu/44sp/).
+An explanation of the algorithm can be found [here](https://algs4.cs.princeton.edu/44sp/) and [here](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.86.1981&rep=rep1&type=pdf).
 
 This is a simplified version of Bellman-Ford provided by the above link:
 ```
