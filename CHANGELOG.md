@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file. As this project was started for a class which requires I (wardbradt) record my daily changes, I will also daily record changes which may not be "notable."
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
+## [0.3.1b] - 2018-02-20
+### Changed
+- __init__.py files
 [0.3.0b] - 2018-02-20
 ### Added
 - Cross Exchange Bellman Ford (beta)
