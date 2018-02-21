@@ -33,7 +33,7 @@ class NegativeWeightFinder:
 
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                return retrace_negative_loop(self.predecessor, source)
+                return retrace_negative_loop(self.predecessor, edge[0])
 
         return None
 
@@ -47,6 +47,7 @@ def retrace_negative_loop(predecessor, start):
     next_node = start
     while True:
         next_node = predecessor[next_node]
+        # if next_node != start:
         if next_node not in arbitrage_loop:
             arbitrage_loop.insert(0, next_node)
         else:
