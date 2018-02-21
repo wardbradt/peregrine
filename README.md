@@ -43,3 +43,4 @@ print(opportunity)
 * Create (better) data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities
 * Update cythonperegrine to reflect some of the changes to peregrine
+* Update doc strings to the same [standard](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard) as NumPy and SciPy
