@@ -149,10 +149,18 @@ def _retrace_negative_loop_t(predecessor, start):
     """
     arbitrage_loop = [start]
     next_node = start
+    # to avoid side effects of modifying predecessor, we can not use pop().
+    predecessor_count = {}
     while True:
+        if next_node not in predecessor_count.keys():
+            predecessor_count[next_node] = -1
+        else:
+            predecessor_count[next_node] -= 1
+
         # if arbitrage_loop[0] has a predecessor (if the loop is incomplete)
-        if predecessor[next_node]:
-            next_node = predecessor[next_node].pop()
+        # if predecessor[next_node]:
+        if -predecessor_count[next_node] <= len(predecessor[next_node]):
+            next_node = predecessor[next_node][predecessor_count[next_node]]
             arbitrage_loop.insert(0, next_node)
         # else, loop is finished.
         else:
