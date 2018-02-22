@@ -20,3 +20,10 @@ def elements_next_to_each_other(list_to_check: list, *args):
             if j == len(args) - 1:
                 return True
     return False
+
+
+def last_index_in_list(li: list, element):
+    """
+    Thanks to https://stackoverflow.com/questions/6890170/how-to-find-the-last-occurrence-of-an-item-in-a-python-list
+    """
+    return len(li) - next(i for i, v in enumerate(reversed(li), 1) if v == element)

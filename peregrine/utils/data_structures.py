@@ -3,13 +3,15 @@ class StackSet:
         self.data = []
         self.soft_pop_counter = 0
 
-    def add(self, element):
-        if element in self.data:
+    def add(self, element, enforce_stack=True):
+        if enforce_stack and element in self.data:
             self.data.remove(element)
+
         self.data.append(element)
+        return True
 
     def pop(self):
-        self.data.pop()
+        return self.data.pop()
 
     def soft_pop(self):
         """
@@ -20,10 +22,26 @@ class StackSet:
         soft_pop has not yet returned e).
         """
         self.soft_pop_counter -= 1
-        if self.is_done_popping:
-            raise IndexError("Done soft popping!")
-        return self.data[self.soft_pop_counter]
+        if -self.soft_pop_counter <= len(self.data):
+            return self.data[self.soft_pop_counter]
+        else:
+            raise IndexError("Soft popping completed.")
 
     @property
-    def is_done_popping(self):
-        return -self.soft_pop_counter > len(self.data)
+    def done_popping(self):
+        result = -self.soft_pop_counter >= len(self.data)
+        if result:
+            self.soft_pop_counter = 0
+        return result
+
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return str(list(self.data))
