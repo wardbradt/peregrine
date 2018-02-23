@@ -1,7 +1,8 @@
 import math
 import networkx as nx
 import asyncio
-from utils.data_structures import StackSet
+from utils import StackSet
+from utils import last_index_in_list
 
 
 def _get_greatest_edge_in_bunch(edge_bunch, weight='weight'):
@@ -93,7 +94,8 @@ class NegativeWeightFinderMulti:
 
         :param source: The node in graph from which the values in distance_to will be calculated.
         :return: a 2-tuple containing the graph with least weighted edges in each edge bunch and the path for a
-        negative cycle through that graph
+        negative cycle through that graph.
+        path = [] if no negative weight cycle exists.
         """
         self.initialize(source)
 
@@ -109,31 +111,11 @@ class NegativeWeightFinderMulti:
                     # move edge[0] to the end of self.predecessor[edge[1]]
                     self.predecessor[edge[1]].add(edge[0])
 
-        yield self.new_graph
         for edge in self.new_graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                # print_profit_opportunity_for_path(self.new_graph, _retrace_negative_loop_t(self.predecessor, edge[0]))
-
-                yield _retrace_negative_loop_t(self.predecessor, edge[1])
+                return self.new_graph, _retrace_negative_loop_t(self.predecessor, edge[1])
 
         return self.new_graph, []
-
-
-def _retrace_negative_loop(predecessor, start):
-    """
-    Does not currently work as a node may be encountered more than once.
-    """
-    arbitrage_loop = [start]
-    next_node = start
-    while True:
-        next_node = predecessor[next_node]
-
-        if next_node not in arbitrage_loop:
-            arbitrage_loop.insert(0, next_node)
-        else:
-            arbitrage_loop.insert(0, next_node)
-            # arbitrage_loop = arbitrage_loop[arbitrage_loop.index(next_node):]
-            return arbitrage_loop
 
 
 def _retrace_negative_loop_t(predecessor, start):
@@ -148,14 +130,17 @@ def _retrace_negative_loop_t(predecessor, start):
     next_node = start
     while True:
         # if arbitrage_loop[0] has a predecessor (if the loop is incomplete)
-        if not predecessor[next_node].done_popping:
-            next_node = predecessor[next_node].soft_pop()
+        next_node = predecessor[next_node].soft_pop()
+        if next_node not in arbitrage_loop:
+        # if not predecessor[next_node].done_popping:
+        #     next_node = predecessor[next_node].soft_pop()
             arbitrage_loop.insert(0, next_node)
         # else, loop is finished.
         else:
+            arbitrage_loop.insert(0, next_node)
             for stack_set in predecessor.values():
                 stack_set.soft_pop_counter = 0
-            # return arbitrage_loop[arbitrage_loop.index(start):]
+            arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
             return arbitrage_loop
 
 
@@ -174,7 +159,7 @@ def calculate_profit_for_path_multi(graph: nx.MultiGraph, path):
             # y = x[end][0]
             total += graph[start][end]['weight']
 
-    return total
+    return math.exp(-total)
 
 
 def print_profit_opportunity_for_path(graph: nx.Graph, path):
