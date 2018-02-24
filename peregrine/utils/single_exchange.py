@@ -25,7 +25,7 @@ def create_exchange_graph(exchange: ccxt.Exchange):
     return graph
 
 
-async def load_exchange_graph(exchange_name):
+async def load_exchange_graph(exchange_name) -> nx.DiGraph:
     """
     Returns a DiGraph as described in populate_exchange_graph
     Not optimized.
@@ -36,7 +36,7 @@ async def load_exchange_graph(exchange_name):
     return await populate_exchange_graph(graph, exchange, log=True)
 
 
-async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=True):
+async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=True) -> nx.DiGraph:
     """
     Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
     edges)

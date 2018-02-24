@@ -62,6 +62,9 @@ async def _add_exchange_to_multi_digraph(graph: nx.MultiDiGraph, exchange: ccxt.
 
 
 # todo: refactor. there is a lot of code repetition here with single_exchange.py's _add_market_to_multi_digraph
+# todo: write tests which prove market_name is always a ticker on exchange and exchange's load_markets has been called.
+# this will validate that all exceptions thrown by await exchange.fetch_ticker(market_name) are solely because of
+# ccxt's fetch_ticker
 async def _add_market_to_multi_digraph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True):
     try:
         ticker = await exchange.fetch_ticker(market_name)

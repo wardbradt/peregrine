@@ -1,5 +1,6 @@
 import math
 import networkx as nx
+from utils import last_index_in_list
 
 
 class NegativeWeightFinder:
@@ -31,11 +32,18 @@ class NegativeWeightFinder:
                     self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
                     self.predecessor[edge[1]] = edge[0]
 
+        # todo: if a negative cycle is found, does that mean source is definitely in it? (probably not)
+        # todo: how to (efficiently) tell if a found negative cycle contains source?
+        # would checking if edge[1] or edge[0] == source indicate it is a cycle ending at source?
+        found_negative = False
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                return retrace_negative_loop(self.predecessor, source)
+                self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
+                self.predecessor[edge[1]] = edge[0]
+                found_negative = True
 
-        return None
+        if found_negative:
+            return retrace_negative_loop(self.predecessor, source)
 
 
 def bellman_ford(graph, source):
@@ -51,7 +59,7 @@ def retrace_negative_loop(predecessor, start):
             arbitrage_loop.insert(0, next_node)
         else:
             arbitrage_loop.insert(0, next_node)
-            arbitrage_loop = arbitrage_loop[arbitrage_loop.index(next_node):]
+            arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
             return arbitrage_loop
 
 

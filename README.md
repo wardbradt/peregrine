@@ -38,11 +38,11 @@ print(opportunity)
 ### One Exchange/ Multiple Currencies
 ```python
 import asyncio
-from peregrine import load_exchange_graph, bellman_ford, print_profit_opportunity_for_path
+from peregrine import load_exchange_graph, bellman_ford_multi, print_profit_opportunity_for_path_multi
 loop = asyncio.get_event_loop()
 graph = loop.run_until_complete(load_exchange_graph('binance')) # load_exchange_graph is asynchronous
-path = bellman_ford(graph, 'LTC')
-print_profit_opportunity_for_path(graph, path)
+path = bellman_ford_multi(graph, 'LTC')
+print_profit_opportunity_for_path_multi(graph, path)
 ```
 This prints the following in under a second (plus the time waiting for the API response from Binance):
 ```
@@ -77,8 +77,8 @@ NEO to ETH at 0.1410783 = 100.93556429493631 on bittrex for NEO/ETH
 * Package for pip
 * Allow exchange objects (instead of exchange names) to be used as arguments for functions in several files (namely async_find_opportunities.py)
 * Write better examples and unit tests
-* Refactor bellmannx.py and bellman_multi_exchange.py to avoid two functions both named `bellman_ford`
-* Fix `print_profit_opportunity_for_path` (look at comment in bellman_multi_graph.py for more information)
+* Refactor bellmannx.py and bellman_multi_exchange.py to avoid two functions both named `bellman_ford_multi`
+* Fix `print_profit_opportunity_for_path_multi` (look at comment in bellman_multi_graph.py for more information)
 ## Potential Enhancements
 * Create (better) data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities
