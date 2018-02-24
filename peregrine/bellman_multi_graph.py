@@ -51,7 +51,6 @@ class NegativeWeightFinderMulti:
     def bellman_ford(self, source):
         """
         todo: would be very easy to refactor this to accommodate plain digraphs.
-
         :param source: The node in graph from which the values in distance_to will be calculated.
         :return: a 2-tuple containing the graph with least weighted edges in each edge bunch and the path for a
         negative cycle through that graph.

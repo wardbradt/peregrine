@@ -17,6 +17,7 @@ def multi_digraph_from_json(file_name):
 
     return G
 
+
 def digraph_from_multi_graph_json(file_name):
     """
     file_name should hold a JSON which represents a MultiDigraph which represents one exchange
