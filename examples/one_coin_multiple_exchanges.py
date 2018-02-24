@@ -4,8 +4,8 @@ import networkx as nx
 import json
 import asyncio
 
-with open('graph.json', 'w') as outfile:
-    json.dump(nx.to_dict_of_dicts(create_weighted_multi_exchange_digraph(['kraken'], log=True)), outfile)
+# with open('graph.json', 'w') as outfile:
+#     json.dump(nx.to_dict_of_dicts(create_weighted_multi_exchange_digraph(['kraken'], log=True)), outfile)
 
 
 def multi_digraph_from_json(file_name):
@@ -48,7 +48,7 @@ print_profit_opportunity_for_path_multi(graph, path)
 print("\n")
 
 
-graph = digraph_from_multi_graph_json('graph.json')
-# print(nx.to_dict_of_dicts(graph))
-path = bellman_ford(graph, 'EUR')
-print_profit_opportunity_for_path(graph, path)
+# graph = digraph_from_multi_graph_json('graph.json')
+# # print(nx.to_dict_of_dicts(graph))
+# path = bellman_ford(graph, 'EUR')
+# print_profit_opportunity_for_path(graph, path)

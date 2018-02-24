@@ -55,7 +55,8 @@ class NegativeWeightFinderMulti:
         self.new_graph = nx.DiGraph()
         # self.predecessor is a dict keyed by node and valued by lists which serve as priority queues. see this link:
         # https://docs.python.org/3/tutorial/datastructures.html#using-lists-as-queues to understand how they do so.
-        # look at the comment in _retrace_negative_loop_t to understand the elements in each pqueue (list).
+        # A dict keyed by node n1 and valued by priority queues of preceding nodes (the node n2 at top
+        # of each queue has least weighted edge n2 -> n1 in stack. queue should be in ascending order of edge weights).
         self.predecessor = {}
         self.distance_to = {}
 
@@ -86,7 +87,6 @@ class NegativeWeightFinderMulti:
         if self.distance_to[edge_bunch[0]] + ideal_edge['weight'] <= self.distance_to[edge_bunch[1]]:
             self.distance_to[edge_bunch[1]] = self.distance_to[edge_bunch[0]] + ideal_edge['weight']
             self.predecessor[edge_bunch[1]].add(edge_bunch[0])
-            # self.predecessor[edge_bunch[1]].append(edge_bunch[0])
 
     def bellman_ford(self, source):
         """
@@ -113,35 +113,35 @@ class NegativeWeightFinderMulti:
 
         for edge in self.new_graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                return self.new_graph, _retrace_negative_loop_t(self.predecessor, edge[1])
+                # todo: does relaxing the edge ensure that the starting and ending nodes are source if source is in the
+                # path?
+                # self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
+                # self.predecessor[edge[1]].add(edge[0])
+                return self.new_graph, self._retrace_negative_loop(edge[1])
 
         return self.new_graph, []
 
+    def _retrace_negative_loop(self, start):
+        """
+        In development.
+        :return: negative loop path
+        """
+        arbitrage_loop = [start]
+        next_node = start
+        # todo: could refactor to make the while statement `while next_node not in arbitrage_loop`
+        while True:
+            next_node = self.predecessor[next_node].soft_pop()
+            if next_node not in arbitrage_loop:
+                arbitrage_loop.insert(0, next_node)
+            # else, loop is finished.
+            else:
+                arbitrage_loop.insert(0, next_node)
+                # arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
+                return arbitrage_loop
 
-def _retrace_negative_loop_t(predecessor, start):
-    """
-    In development.
-    :param predecessor: A dict keyed by node n1 and valued by priority queues of preceding nodes (the node n2 at top
-    of each queue has least weighted edge n2 -> n1 in stack. queue should be in ascending order of edge weights).
-    :param start: the node at which the cycle starts
-    :return: negative loop path
-    """
-    arbitrage_loop = [start]
-    next_node = start
-    while True:
-        # if arbitrage_loop[0] has a predecessor (if the loop is incomplete)
-        next_node = predecessor[next_node].soft_pop()
-        if next_node not in arbitrage_loop:
-        # if not predecessor[next_node].done_popping:
-        #     next_node = predecessor[next_node].soft_pop()
-            arbitrage_loop.insert(0, next_node)
-        # else, loop is finished.
-        else:
-            arbitrage_loop.insert(0, next_node)
-            for stack_set in predecessor.values():
-                stack_set.soft_pop_counter = 0
-            arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
-            return arbitrage_loop
+    def reset_predecessor_iteration(self):
+        for node in self.predecessor.keys():
+            self.predecessor[node].soft_pop_counter = 0
 
 
 def bellman_ford_multi(graph: nx.MultiGraph, source):
