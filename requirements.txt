@@ -1,3 +1,4 @@
+numpy
 aiodns==1.1.1
 aiohttp==3.0.1
 async-timeout==2.0.0
