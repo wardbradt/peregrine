@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file. As this project was started for a class which requires I (wardbradt) record my daily changes, I will also daily record changes which may not be "notable."
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
+## [0.3.4] - 2018-02-24
+### Added
+- Some comments in bellman_multi_graph.py
 ## [0.3.3] - 2018-02-24
 ### Added
 - StackSet (In utils/data_structures.py)

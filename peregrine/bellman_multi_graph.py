@@ -14,10 +14,10 @@ class NegativeWeightFinderMulti:
         # Because cannot modify graph's edges while iterating over its edge_bunches, must create new graph
         # graph with lowest ask and highest bid
         self.new_graph = nx.DiGraph()
-        # self.predecessor is a dict keyed by node and valued by lists which serve as priority queues. see this link:
-        # https://docs.python.org/3/tutorial/datastructures.html#using-lists-as-queues to understand how they do so.
-        # A dict keyed by node n1 and valued by priority queues of preceding nodes (the node n2 at top
+        # A dict keyed by node n1 and valued by StackSets of preceding nodes (the node n2 at top
         # of each queue has least weighted edge n2 -> n1 in stack. queue should be in ascending order of edge weights).
+        # Although the StackSet functionality is not currently used, it may be useful in the future (particularly if
+        # attempting to exit a predecessor cycle)
         self.predecessor = {}
         self.distance_to = {}
 
@@ -30,6 +30,12 @@ class NegativeWeightFinderMulti:
         self.distance_to[source] = 0
 
     def _first_iteration(self):
+        """
+        On the first iteration, finds the least-weighted edge between in each edge bunch in self.graph and creates
+        a DiGraph, self.new_graph using those least-weighted edges. Also completes the first relaxation iteration. This
+        is why in bellman_ford, there are only len(self.graph) - 1 iterations of relaxing the edges. (The first
+        iteration is completed in the method.)
+        """
         [self._process_edge_bunch(edge_bunch) for edge_bunch in self.graph.edge_bunches(data=True)]
 
     def _process_edge_bunch(self, edge_bunch):
@@ -104,6 +110,9 @@ class NegativeWeightFinderMulti:
 
 
 def bellman_ford_multi(graph: nx.MultiGraph, source):
+    """
+    Returns the path for an arbitrage-able trade cycle reachable from source, a node in graph.
+    """
     return NegativeWeightFinderMulti(graph).bellman_ford(source)
 
 
