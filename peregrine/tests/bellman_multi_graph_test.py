@@ -43,8 +43,6 @@ class TestBellmanFordMultiGraph(TestCase):
         for node in graph:
             new_graph, path = bellman_ford_multi(graph, node)
             if path:
-                print(node)
-                print(path)
                 self.assertEqual(path[0], path[-1])
 
     def test_positive_ratio(self):
