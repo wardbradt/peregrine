@@ -17,6 +17,23 @@ def multi_digraph_from_json(file_name):
 
     return G
 
+def digraph_from_multi_graph_json(file_name):
+    """
+    file_name should hold a JSON which represents a MultiDigraph which represents one exchange
+    :param file_name:
+    """
+    with open(file_name) as f:
+        data = json.load(f)
+
+    G = nx.DiGraph()
+    for node in data.keys():
+        neighbors = data[node]
+        for neighbor, v in neighbors.items():
+            for key, data_dict in v.items():
+                G.add_edge(node, neighbor, **data_dict)
+
+    return G
+
 
 class TestBellmanFordMultiGraph(TestCase):
 

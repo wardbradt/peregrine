@@ -1,6 +1,6 @@
 import math
 import networkx as nx
-# from utils import last_index_in_list
+from utils import last_index_in_list
 
 
 class NegativeWeightFinder:
@@ -55,14 +55,11 @@ def retrace_negative_loop(predecessor, start):
     next_node = start
     while True:
         next_node = predecessor[next_node]
-        # if next_node != start:
         if next_node not in arbitrage_loop:
             arbitrage_loop.insert(0, next_node)
         else:
             arbitrage_loop.insert(0, next_node)
-            # print("a: " +
-            #       str(arbitrage_loop[arbitrage_loop.index(next_node):last_index_in_list(arbitrage_loop, next_node) + 1]))
-            # arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
+            arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
             return arbitrage_loop
 
 
