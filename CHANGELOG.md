@@ -2,6 +2,26 @@
 All notable changes to this project will be documented in this file. As this project was started for a class which requires I (wardbradt) record my daily changes, I will also daily record changes which may not be "notable."
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
+## [0.3.4] - 2018-02-24
+### Added
+- Some comments in bellman_multi_graph.py
+## [0.3.3] - 2018-02-24
+### Added
+- StackSet (In utils/data_structures.py)
+- get_greatest_edge_in_bunch, get_least_edge_in_bunch (In utils/graph_utils.py)
+- print_profit_opportunity_for_path_multi (In utils/general.py)
+- elements_next_to_each_other and last_index_in_list (In utils/misc.py)
+- tests/test_misc.py
+- tests/bellman_multi_graph_test.py
+- statement in print_profit_opportunity_for_path to account for empty paths
+
+### Changed
+- bellmannx.py with comments and cleaner code, also made it so `bellman_ford` only returns the arbitrage loop (it cuts off extra trades)
+- bellman_multi_graph.py majorly. Look at comments to see how it works.
+- Refactored utils and imports
+- draw_graph_to_file(graph, dot_name: str, to_file: str) to draw_graph_to_png(graph, to_file: str)
+- README.md to account for function name changes
+
 ## [0.3.2b] - 2018-02-20
 ### Added
 - Explicit python decorator to README pre-formatted blocks

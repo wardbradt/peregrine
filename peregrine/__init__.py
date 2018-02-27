@@ -5,4 +5,3 @@ from .bellman_multi_graph import bellman_ford as bellman_ford_multi, \
     print_profit_opportunity_for_path as print_profit_opportunity_for_path_multi
 from .bellmannx import bellman_ford, calculate_profit_ratio_for_path
 from .utils import *
-

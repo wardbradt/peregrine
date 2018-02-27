@@ -1,40 +1,6 @@
 import math
 import networkx as nx
-import asyncio
-
-
-def _get_greatest_edge_in_bunch(edge_bunch, weight='weight'):
-    """
-    Edge bunch must be of the format (u, v, d) where u and v are the tail and head nodes (respectively) and d is a list
-    of dicts holding the edge_data for each edge in the bunch
-    
-    Not optimized because currently the only place that calls it first checks len(edge_bunch[2]) > 0
-    todo: could take only edge_bunch[2] as parameter
-    """
-    if len(edge_bunch[2]) == 0:
-        raise ValueError("Edge bunch must contain more than one edge.")
-    greatest = {weight: -float('Inf')}
-    for data in edge_bunch[2]:
-        if data[weight] > greatest[weight]:
-            greatest = data
-            
-    return greatest
-
-
-def _get_least_edge_in_bunch(edge_bunch, weight='weight'):
-    """
-    Edge bunch must be of the format (u, v, d) where u and v are the tail and head nodes (respectively) and d is a list
-    of dicts holding the edge_data for each edge in the bunch
-    """
-    if len(edge_bunch[2]) == 0:
-        raise ValueError("Edge bunch must contain more than one edge.")
-    
-    least = {weight: float('Inf')}
-    for data in edge_bunch[2]:
-        if data[weight] < least[weight]:
-            least = data
-
-    return least
+from utils import StackSet, last_index_in_list, get_least_edge_in_bunch
 
 
 class NegativeWeightFinderMulti:
@@ -48,6 +14,10 @@ class NegativeWeightFinderMulti:
         # Because cannot modify graph's edges while iterating over its edge_bunches, must create new graph
         # graph with lowest ask and highest bid
         self.new_graph = nx.DiGraph()
+        # A dict keyed by node n1 and valued by StackSets of preceding nodes (the node n2 at top
+        # of each queue has least weighted edge n2 -> n1 in stack. queue should be in ascending order of edge weights).
+        # Although the StackSet functionality is not currently used, it may be useful in the future (particularly if
+        # attempting to exit a predecessor cycle)
         self.predecessor = {}
         self.distance_to = {}
 
@@ -55,47 +25,42 @@ class NegativeWeightFinderMulti:
         for node in self.graph:
             # Initialize all distance_to values to infinity and all predecessor values to None
             self.distance_to[node] = float('Inf')
-            self.predecessor[node] = None
+            self.predecessor[node] = StackSet()
         # The distance from any node to (itself) == 0
         self.distance_to[source] = 0
 
     def _first_iteration(self):
-        futures = [asyncio.ensure_future(self._process_edge_bunch(edge_bunch))
-                   for edge_bunch in self.graph.edge_bunches(data=True)]
-        asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
-
-    async def _process_edge_bunch(self, edge_bunch):
         """
-        Todo: refactor for general usage (mainly have to change the first if statements)
+        On the first iteration, finds the least-weighted edge between in each edge bunch in self.graph and creates
+        a DiGraph, self.new_graph using those least-weighted edges. Also completes the first relaxation iteration. This
+        is why in bellman_ford, there are only len(self.graph) - 1 iterations of relaxing the edges. (The first
+        iteration is completed in the method.)
         """
-        # this assumes that market symbols are uniform across all exchanges (i.e every market A/B on on exchange is
-        # always represented as A/B, never B/A.
-        # if edge_bunch[0] == base currency, the edge weights represent the bid price so we look for
-        # the greatest edge weight
-        if edge_bunch[0] == edge_bunch[2][0]['market_name'].split('/')[0]:
-            ideal_edge = _get_greatest_edge_in_bunch(edge_bunch)
-        # else, edge_bunch[1] == quote currency so we look for the least edge weight.
-        else:
-            ideal_edge = _get_least_edge_in_bunch(edge_bunch)
+        [self._process_edge_bunch(edge_bunch) for edge_bunch in self.graph.edge_bunches(data=True)]
 
-        # todo: does this ever happen?
-        if ideal_edge['weight'] == -float('Inf'):
+    def _process_edge_bunch(self, edge_bunch):
+        """
+        todo: could easily refactor this for general usage. (e.g. not specifically for graphs with exchange_name
+        and market_name edge attributes
+        """
+        ideal_edge = get_least_edge_in_bunch(edge_bunch)
+        # todo: does this ever happen? if so, the least weighted edge in edge_bunch would have to have infinite weight
+        if ideal_edge['weight'] == float('Inf'):
             return
 
-        # todo: there is probably a more efficient way to keep only the edges which show minimum ask and maximum bid
-        self.new_graph.add_edge(edge_bunch[0], edge_bunch[1],
-                                exchange_name=ideal_edge['exchange_name'],
-                                market_name=ideal_edge['market_name'],
-                                weight=ideal_edge['weight'])
+        self.new_graph.add_edge(edge_bunch[0], edge_bunch[1], **ideal_edge)
 
-        # todo: delete print statements. they test if this condition is always true.
         if self.distance_to[edge_bunch[0]] + ideal_edge['weight'] <= self.distance_to[edge_bunch[1]]:
             self.distance_to[edge_bunch[1]] = self.distance_to[edge_bunch[0]] + ideal_edge['weight']
-            self.predecessor[edge_bunch[1]] = edge_bunch[0]
+            self.predecessor[edge_bunch[1]].add(edge_bunch[0])
 
     def bellman_ford(self, source):
         """
+        todo: would be very easy to refactor this to accommodate plain digraphs.
         :param source: The node in graph from which the values in distance_to will be calculated.
+        :return: a 2-tuple containing the graph with least weighted edges in each edge bunch and the path for a
+        negative cycle through that graph.
+        path = [] if no negative weight cycle exists.
         """
         self.initialize(source)
 
@@ -103,54 +68,62 @@ class NegativeWeightFinderMulti:
         self._first_iteration()
 
         # After len(graph) - 1 passes, algorithm is complete.
-        for i in range(1, len(self.new_graph) - 1):
-            # for each node in the graph, test if the distance to each of its siblings is shorter by going from
-            # source->base_currency + base_currency->quote_currency
+        for i in range(1, len(self.graph) - 1):
             for edge in self.new_graph.edges(data=True):
                 if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                     self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
-                    self.predecessor[edge[1]] = edge[0]
+                    # important todo: there must be a more efficient way to order neighbors by preceding path weights
+                    # move edge[0] to the end of self.predecessor[edge[1]]
+                    self.predecessor[edge[1]].add(edge[0])
 
         for edge in self.new_graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                return _retrace_negative_loop(self.predecessor, source)
+                # todo: does relaxing the edge ensure that the starting and ending nodes are source if source is in the
+                # path?
+                self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
+                self.predecessor[edge[1]].add(edge[0])
+                return self.new_graph, self._retrace_negative_loop(edge[1])
 
-        return None
+        return self.new_graph, []
+
+    def _retrace_negative_loop(self, start):
+        """
+        In development.
+        :return: negative loop path
+        """
+        arbitrage_loop = [start]
+        next_node = start
+        # todo: could refactor to make the while statement `while next_node not in arbitrage_loop`
+        while True:
+            next_node = self.predecessor[next_node].soft_pop()
+            if next_node not in arbitrage_loop:
+                arbitrage_loop.insert(0, next_node)
+            # else, loop is finished.
+            else:
+                arbitrage_loop.insert(0, next_node)
+                arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
+                return arbitrage_loop
+
+    def reset_predecessor_iteration(self):
+        for node in self.predecessor.keys():
+            self.predecessor[node].soft_pop_counter = 0
 
 
-def _retrace_negative_loop(predecessor, start):
+def bellman_ford_multi(graph: nx.MultiGraph, source):
     """
-    Does not currently work as a node may be encountered more than once.
+    Returns the path for an arbitrage-able trade cycle reachable from source, a node in graph.
     """
-    arbitrage_loop = [start]
-    next_node = start
-    while True:
-        next_node = predecessor[next_node]
-        if next_node not in arbitrage_loop:
-            arbitrage_loop.insert(0, next_node)
-        else:
-            arbitrage_loop.insert(0, next_node)
-            arbitrage_loop = arbitrage_loop[arbitrage_loop.index(next_node):]
-            return arbitrage_loop
-
-
-def bellman_ford(graph: nx.MultiGraph, source):
     return NegativeWeightFinderMulti(graph).bellman_ford(source)
 
 
-def print_profit_opportunity_for_path(graph: nx.MultiGraph, path):
-    money = 100
-    print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
-
+def calculate_profit_for_path_multi(graph: nx.MultiGraph, path):
+    total = 0
     for i in range(len(path)):
         if i + 1 < len(path):
             start = path[i]
             end = path[i + 1]
-            x = graph[start]
-            y = x[end][0]
-            # todo: we should not have to add [0] to this. it should simply be [start][end]['weight'].
-            rate = math.exp(-graph[start][end][0]['weight'])
-            money *= rate
-            print("{} to {} at {} = {} on {} for {}".format(start, end, rate, money,
-                                                            graph[start][end][0]['exchange_name'],
-                                                            graph[start][end][0]['market_name']))
+            total += graph[start][end]['weight']
+
+    return math.exp(-total)
+
+

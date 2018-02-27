@@ -1,6 +1,7 @@
 import json
 import math
 
+import networkx as nx
 from ccxt import async as ccxt
 
 
@@ -36,6 +37,9 @@ def get_exchanges_for_market(market_ticker):
 
 
 def print_profit_opportunity_for_path(graph, path):
+    if not path:
+        return
+
     money = 100
     print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
 
@@ -48,3 +52,26 @@ def print_profit_opportunity_for_path(graph, path):
             money *= rate
             print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
                                                                     "money": money})
+
+
+def print_profit_opportunity_for_path_multi(graph: nx.Graph, path):
+    """
+    The only difference between this function and the function in utils/general.py is that the print statement
+    specifies the exchange name. It assumes all edges in graph and in path have exchange_name and market_name
+    attributes.
+    """
+    if not path:
+        return
+
+    money = 100
+    print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
+
+    for i in range(len(path)):
+        if i + 1 < len(path):
+            start = path[i]
+            end = path[i + 1]
+            rate = math.exp(-graph[start][end]['weight'])
+            money *= rate
+            print("{} to {} at {} = {} on {} for {}".format(start, end, rate, money,
+                                                            graph[start][end]['exchange_name'],
+                                                            graph[start][end]['market_name']))
