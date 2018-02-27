@@ -54,9 +54,12 @@ class NegativeWeightFinderMulti:
             self.distance_to[edge_bunch[1]] = self.distance_to[edge_bunch[0]] + ideal_edge['weight']
             self.predecessor[edge_bunch[1]].add(edge_bunch[0])
 
-    def bellman_ford(self, source):
+    def bellman_ford(self, source, loop_from_source=False):
         """
         todo: would be very easy to refactor this to accommodate plain digraphs.
+        :param loop_from_source: if true, will return the path beginning and ending at source. Note: this may cause the
+        path to be a positive-weight cycle (if traversed straight through). Because a negative cycle exists in the path,
+        (and it can be traversed infinitely many times), the path is negative.
         :param source: The node in graph from which the values in distance_to will be calculated.
         :return: a 2-tuple containing the graph with least weighted edges in each edge bunch and the path for a
         negative cycle through that graph.
@@ -76,33 +79,67 @@ class NegativeWeightFinderMulti:
                     # move edge[0] to the end of self.predecessor[edge[1]]
                     self.predecessor[edge[1]].add(edge[0])
 
+        # todo: to find all edges, refactor this for loop. don't use edges. i believe that for every node, if
+        # self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]] and this function yields on that
+        # iteration, it returns the same path accessible from edge[0]
         for edge in self.new_graph.edges(data=True):
+            # todo: does this indicate that there is a negative cycle beginning and ending with edge[1]? or just that
+            # edge[1] connects to a negative cycle?
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 # todo: does relaxing the edge ensure that the starting and ending nodes are source if source is in the
                 # path?
                 self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
                 self.predecessor[edge[1]].add(edge[0])
-                return self.new_graph, self._retrace_negative_loop(edge[1])
+                yield self._retrace_negative_loop(edge[1], loop_from_source, source)
+                self.reset_predecessor_iteration()
 
-        return self.new_graph, []
+        # return self.new_graph, []
 
-    def _retrace_negative_loop(self, start):
+    def _retrace_negative_loop(self, start, loop_from_source=False, source=''):
         """
-        In development.
+        @:param loop_from_source: look at docstring of bellman_ford
         :return: negative loop path
         """
         arbitrage_loop = [start]
         next_node = start
         # todo: could refactor to make the while statement `while next_node not in arbitrage_loop`
-        while True:
-            next_node = self.predecessor[next_node].soft_pop()
-            if next_node not in arbitrage_loop:
-                arbitrage_loop.insert(0, next_node)
-            # else, loop is finished.
-            else:
-                arbitrage_loop.insert(0, next_node)
-                arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
-                return arbitrage_loop
+        if not loop_from_source:
+            while True:
+                next_node = self.predecessor[next_node].soft_pop()
+                if next_node not in arbitrage_loop:
+                    arbitrage_loop.insert(0, next_node)
+                # else, negative cycle is complete.
+                else:
+                    arbitrage_loop.insert(0, next_node)
+                    arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
+                    return arbitrage_loop
+        else:
+            while True:
+                next_node = self.predecessor[next_node].soft_pop()
+                if next_node not in arbitrage_loop:
+                    arbitrage_loop.insert(0, next_node)
+                # else, negative cycle is complete.
+                else:
+                    arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
+                    # the node in arbitrage_loop which has the least weighted path to source
+                    min_distance_node = min(arbitrage_loop, key=lambda x: self.distance_to[x])
+                    # todo: collections.deque might be more efficient for shifting the list. might not be because would
+                    # probably necessitate call to .index()
+                    # rotate so that min_distance_node is first in arbitrage_loop
+                    for i in range(len(arbitrage_loop)):
+                        if arbitrage_loop[0] != min_distance_node:
+                            arbitrage_loop = arbitrage_loop[1:] + arbitrage_loop[0]
+                        else:
+                            break
+                    arbitrage_loop.append(min_distance_node)
+                    # todo: is there an edge case if source is in arbitrage_loop?
+                    while next_node != source:
+                        pass
+
+                    return arbitrage_loop
+
+    def _retrace_negative_loops(self, start):
+        pass
 
     def reset_predecessor_iteration(self):
         for node in self.predecessor.keys():
@@ -111,9 +148,12 @@ class NegativeWeightFinderMulti:
 
 def bellman_ford_multi(graph: nx.MultiGraph, source):
     """
-    Returns the path for an arbitrage-able trade cycle reachable from source, a node in graph.
+    Returns a 2-tuple containing the graph with most negative weights in every edge bunch and a generator which iterates
+    over the negative cycle in graph
     """
-    return NegativeWeightFinderMulti(graph).bellman_ford(source)
+    finder = NegativeWeightFinderMulti(graph)
+    paths = finder.bellman_ford(source)
+    return finder.new_graph, paths
 
 
 def calculate_profit_for_path_multi(graph: nx.MultiGraph, path):
