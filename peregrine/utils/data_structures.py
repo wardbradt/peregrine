@@ -10,6 +10,9 @@ class StackSet:
         self.data.append(element)
         return True
 
+    def peek(self):
+        return self.data[-1]
+
     def pop(self):
         return self.data.pop()
 
