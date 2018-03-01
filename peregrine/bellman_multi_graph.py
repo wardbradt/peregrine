@@ -47,7 +47,7 @@ class NegativeWeightFinderMulti:
         and market_name edge attributes
         """
         ideal_edge = get_least_edge_in_bunch(edge_bunch)
-        # todo: does this ever happen? if so, the least weighted edge in edge_bunch would have to have infinite weight
+        # todo: does this ever happen? if so, the least weighted edge in edge_bunch would have to be of infinite weight
         if ideal_edge['weight'] == float('Inf'):
             return
 
@@ -142,9 +142,7 @@ class NegativeWeightFinderMulti:
                 next_node = self.predecessor_to[arbitrage_loop[0]].peek()[1]
                 # if this edge has not been traversed over, add it to arbitrage_loop
                 if not next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
-                    # if next_node not in arbitrage_loop:
                     arbitrage_loop.insert(0, next_node)
-                    # previous_node = next_node
                 # else, negative cycle is complete.
                 else:
                     # self.predecessor_to[previous_node].pop()
@@ -178,7 +176,7 @@ class NegativeWeightFinderMulti:
                             # next_node equals the second least predecessor of arbitrage_loop[0] so as to not reenter a
                             # negative cycle
                             self.predecessor_to[arbitrage_loop[0]].pop()
-                            # next_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
+                            next_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
                         arbitrage_loop.insert(0, next_node)
 
                     # add the path from arbitrage_loop[-1] -> source to the end of arbitrage_loop
