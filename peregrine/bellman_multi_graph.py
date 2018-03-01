@@ -1,6 +1,6 @@
 import math
 import networkx as nx
-from utils import StackSet, last_index_in_list, get_least_edge_in_bunch
+from utils import last_index_in_list, get_least_edge_in_bunch, PrioritySet, next_to_each_other
 
 
 class NegativeWeightFinderMulti:
@@ -16,8 +16,6 @@ class NegativeWeightFinderMulti:
         self.new_graph = nx.DiGraph()
         # A dict keyed by node n1 and valued by StackSets of preceding nodes (the node n2 at top
         # of each queue has least weighted edge n2 -> n1 in stack. queue should be in ascending order of edge weights).
-        # Although the StackSet functionality is not currently used, it may be useful in the future (particularly if
-        # attempting to exit a predecessor cycle)
         self.predecessor_to = {}
         self.distance_to = {}
         self.predecessor_from = {}
@@ -27,9 +25,9 @@ class NegativeWeightFinderMulti:
         for node in self.graph:
             # Initialize all distance_to values to infinity and all predecessor values to None
             self.distance_to[node] = float('Inf')
-            self.predecessor_to[node] = StackSet()
+            self.predecessor_to[node] = PrioritySet()
             self.distance_from[node] = float('Inf')
-            self.predecessor_from[node] = StackSet()
+            self.predecessor_from[node] = PrioritySet()
         # The distance from any node to (itself) == 0
         self.distance_to[source] = 0
         self.distance_from[source] = 0
@@ -55,22 +53,26 @@ class NegativeWeightFinderMulti:
 
         self.new_graph.add_edge(edge_bunch[0], edge_bunch[1], **ideal_edge)
 
-        x = ''
         if self.distance_to[edge_bunch[0]] + ideal_edge['weight'] < self.distance_to[edge_bunch[1]]:
             self.distance_to[edge_bunch[1]] = self.distance_to[edge_bunch[0]] + ideal_edge['weight']
-            self.predecessor_to[edge_bunch[1]].add(edge_bunch[0])
+        self.predecessor_to[edge_bunch[1]].add(edge_bunch[0],
+                                               self.distance_to[edge_bunch[0]] + ideal_edge['weight'])
 
-        # todo: these conditionals are rarely both true. is there a way to detect when this is the case?
+        # todo: these conditionals are rarely both true. how to detect when this is the case?
         if self.distance_from[edge_bunch[1]] + ideal_edge['weight'] < self.distance_from[edge_bunch[0]]:
             self.distance_from[edge_bunch[0]] = self.distance_from[edge_bunch[1]] + ideal_edge['weight']
-            self.predecessor_from[edge_bunch[0]].add(edge_bunch[1])
+        self.predecessor_from[edge_bunch[0]].add(edge_bunch[1],
+                                                 self.distance_from[edge_bunch[1]] + ideal_edge['weight'])
 
     def bellman_ford(self, source, loop_from_source=False):
         """
         todo: would be very easy to refactor this to accommodate plain digraphs.
         :param loop_from_source: if true, will return the path beginning and ending at source. Note: this may cause the
         path to be a positive-weight cycle (if traversed straight through). Because a negative cycle exists in the path,
-        (and it can be traversed infinitely many times), the path is negative.
+        (and it can be traversed infinitely many times), the path is negative. This is still in development and is
+        certainly not optimized. It is not an implementation of an algorithm that I know of but one that I have created
+        (without too much weight on the optimization, more so on simply completing it).
+        todo: loop_from_source would work better (read: for arbitrage) if it was over a multi-exchange multi-graph.
         :param source: The node in graph from which the values in distance_to will be calculated.
         :return: a 2-tuple containing the graph with least weighted edges in each edge bunch and the path for a
         negative cycle through that graph.
@@ -86,13 +88,15 @@ class NegativeWeightFinderMulti:
             for edge in self.new_graph.edges(data=True):
                 if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                     self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
-                    # important todo: there must be a more efficient way to order neighbors by preceding path weights
-                    # move edge[0] to the end of self.predecessor[edge[1]]
-                    self.predecessor_to[edge[1]].add(edge[0])
+                # important todo: there must be a more efficient way to order neighbors by preceding path weights
+                # move edge[0] to the end of self.predecessor[edge[1]]
+                self.predecessor_to[edge[1]].add(edge[0], self.distance_to[edge[0]] + edge[2]['weight'])
 
                 if self.distance_from[edge[1]] + edge[2]['weight'] < self.distance_from[edge[0]]:
                     self.distance_from[edge[0]] = self.distance_from[edge[1]] + edge[2]['weight']
-                    self.predecessor_from[edge[0]].add(edge[1])
+
+                self.predecessor_from[edge[0]].add(edge[1],
+                                                   self.distance_from[edge[1]] + edge[2]['weight'])
 
         # todo: to find all edges, refactor this for loop. don't use edges. i believe that for every node, if
         # self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]] and this function yields on that
@@ -103,22 +107,23 @@ class NegativeWeightFinderMulti:
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 # todo: what does relaxing the edges here do?
                 self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
-                self.predecessor_to[edge[1]].add(edge[0])
+                self.predecessor_to[edge[1]].add(edge[0], self.distance_to[edge[0]] + edge[2]['weight'])
                 return self._retrace_negative_loop(edge[1], loop_from_source, source)
 
-        # return self.new_graph, []
+        return self.new_graph, []
 
     def _retrace_negative_loop(self, start, loop_from_source=False, source=''):
         """
         @:param loop_from_source: look at docstring of bellman_ford
         :return: negative loop path
         """
+
         arbitrage_loop = [start]
         # todo: could refactor to make the while statement `while next_node not in arbitrage_loop`
         if not loop_from_source:
             next_node = start
             while True:
-                next_node = self.predecessor_to[next_node].soft_pop()
+                next_node = self.predecessor_to[next_node].pop()[1]
                 if next_node not in arbitrage_loop:
                     arbitrage_loop.insert(0, next_node)
                 # else, negative cycle is complete.
@@ -132,58 +137,65 @@ class NegativeWeightFinderMulti:
             if source not in self.new_graph:
                 raise ValueError("source not in graph.")
 
-            previous_node = start
+            # previous_node = start
             while True:
-                next_node = self.predecessor_to[previous_node].peek()
-                if next_node not in arbitrage_loop:
+                next_node = self.predecessor_to[arbitrage_loop[0]].peek()[1]
+                # if this edge has not been traversed over, add it to arbitrage_loop
+                if not next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
+                    # if next_node not in arbitrage_loop:
                     arbitrage_loop.insert(0, next_node)
-                    previous_node = next_node
+                    # previous_node = next_node
                 # else, negative cycle is complete.
                 else:
-                    self.predecessor_to[previous_node].soft_pop()
+                    # self.predecessor_to[previous_node].pop()
                     arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
-                    # the node in arbitrage_loop which source has the least weighted path to
-                    min_distance_to_node = min(arbitrage_loop, key=lambda x: self.distance_to[x])
+                    # # the node in arbitrage_loop which source has the least weighted path to
+                    # min_distance_to_node = min(arbitrage_loop, key=lambda x: self.distance_to[x])
 
                     # rotate so that min_distance_to_node is first in arbitrage_loop
                     # todo: collections.deque might be more efficient for shifting the list. might not be because would
                     # probably necessitate call to .index()
-                    for i in range(len(arbitrage_loop)):
-                        if arbitrage_loop[0] != min_distance_to_node:
-                            arbitrage_loop = arbitrage_loop[1:] + arbitrage_loop[0]
-                        else:
-                            break
+                    # for i in range(len(arbitrage_loop)):
+                    #     if arbitrage_loop[0] != min_distance_to_node:
+                    #         # todo: will len(arbitrage_loop) always > 2? if not, this will cause errors.
+                    #         arbitrage_loop = arbitrage_loop[1:] + [arbitrage_loop[0]]
+                    #     else:
+                    #         break
 
-                    min_distance_from_node = self._get_min_distance_from_node(arbitrage_loop)
-                    for i in range(len(arbitrage_loop)):
-                        arbitrage_loop.append(arbitrage_loop[i])
-                        if arbitrage_loop[i] == min_distance_from_node:
-                            break
+                    # todo: is this necessary?
+                    # min_distance_from_node = self._get_min_distance_from_node(arbitrage_loop)
+                    # for i in range(len(arbitrage_loop)):
+                    #     if arbitrage_loop[-1] != min_distance_from_node:
+                    #         arbitrage_loop.append(arbitrage_loop[i])
+                    #     else:
+                    #         break
 
                     # add the path from source -> min_distance_to_node to the beginning of arbitrage_loop
-                    previous_node = min_distance_to_node
-                    while previous_node != source:
-                        next_node = self.predecessor_to[previous_node].peek()
-                        if next_node in arbitrage_loop:
-                            self.predecessor_to[previous_node].soft_pop()
-
+                    while arbitrage_loop[0] != source:
+                        next_node = self.predecessor_to[arbitrage_loop[0]].peek()[1]
+                        # if this edge has already been traversed over/ added to arbitrage_loop, must exit the cycle.
+                        if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
+                            # next_node equals the second least predecessor of arbitrage_loop[0] so as to not reenter a
+                            # negative cycle
+                            self.predecessor_to[arbitrage_loop[0]].pop()
+                            # next_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
                         arbitrage_loop.insert(0, next_node)
-                        previous_node = next_node
 
-                    # add the path from min_distance_from_node -> source to the end of arbitrage_loop
-                    # previous_node will always equal arbitrage_loop[-1] or if len(added_path) > 0, added_path[-1]
-                    previous_node = min_distance_from_node
-                    added_path = []
-                    # while the last element in the list we will merge with arbitrage_loop != source
-                    while previous_node != source:
-                        next_node = self.predecessor_from[previous_node].peek()
-                        if next_node in added_path:
-                            self.predecessor_from[previous_node].soft_pop()
+                    # add the path from arbitrage_loop[-1] -> source to the end of arbitrage_loop
+                    if source == 'REP':
+                        print()
+                    # while the last element in arbitrage_loop != source
+                    while arbitrage_loop[-1] != source:
+                        next_node = self.predecessor_from[arbitrage_loop[-1]].peek()[1]
+                        if next_to_each_other(arbitrage_loop, arbitrage_loop[-1], next_node):
+                            self.predecessor_from[arbitrage_loop[-1]].pop()
+                            # next_node equals the second least predecessor of arbitrage_loop[-1] so as to not reenter a
+                            # negative cycle
+                            # try:
+                            #     next_node = self.predecessor_from[arbitrage_loop[-1]].pop()[1]
 
-                        added_path.append(next_node)
-                        previous_node = next_node
+                        arbitrage_loop.append(next_node)
 
-                    arbitrage_loop += added_path
                     self.reset_predecessor_iteration()
                     return arbitrage_loop
 
@@ -212,7 +224,9 @@ class NegativeWeightFinderMulti:
 
     def reset_predecessor_iteration(self):
         for node in self.predecessor_to.keys():
-            self.predecessor_to[node].soft_pop_counter = 0
+            self.predecessor_to[node].reset()
+            # predecessor_to and predecessor_to have the same keys
+            self.predecessor_from[node].reset()
 
 
 def bellman_ford_multi(graph: nx.MultiGraph, source, loop_from_source=False):
@@ -234,5 +248,3 @@ def calculate_profit_for_path_multi(graph: nx.MultiGraph, path):
             total += graph[start][end]['weight']
 
     return math.exp(-total)
-
-

@@ -1,3 +1,6 @@
+import heapq
+
+
 class StackSet:
     def __init__(self):
         self.data = []
@@ -48,3 +51,64 @@ class StackSet:
 
     def __str__(self):
         return str(list(self.data))
+
+
+class PrioritySet:
+    def __init__(self):
+        self.heap = []
+        self.popped = {}
+
+    def add(self, d, pri):
+        heapq.heappush(self.heap, (pri, d))
+
+        return True
+
+    def pop(self):
+        popped = heapq.heappop(self.heap)
+        while popped[1] in self.popped.keys():
+            # Raises IndexError if done popping
+            try:
+                popped = heapq.heappop(self.heap)
+            except Exception as e:
+                raise e
+
+        self.popped[popped[1]] = popped[0]
+        return popped
+
+    def peek(self):
+        # self.heap[0][1] is the name of the element
+        try:
+            while self.heap[0][1] in self.popped.keys():
+                # Raises IndexError if done popping
+                heapq.heappop(self.heap)
+        except Exception as e:
+            raise e
+
+        return self.heap[0]
+
+    def reset(self):
+        """
+        Not optimized, slow.
+        # todo: optimize this method. how to account for the fact that self.popped is added in order?
+        """
+        for key, value in self.popped.items():
+            heapq.heappush(self.heap, (value, key))
+        self.popped = {}
+
+    def __str__(self):
+        return str(list(self.heap))
+
+    def __repr__(self):
+        return str(self)
+
+    def __len__(self):
+        """
+        Not optimized. Slow.
+        """
+        total = 0
+        for elem in self.heap:
+            for popped in self.popped:
+                if elem == popped:
+                    total += 1
+
+        return len(self.heap) - total

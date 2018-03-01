@@ -54,3 +54,12 @@ class TestBellmanFordMultiGraph(TestCase):
                 ratio = calculate_profit_for_path_multi(new_graph, path)
                 self.assertGreater(ratio, 1.0)
 
+    def test_loop_from_source(self):
+        graph = multi_digraph_from_json('test_multigraph.json')
+        for node in graph:
+            new_graph, path = bellman_ford_multi(graph, node, loop_from_source=True)
+            print(path)
+            if path:
+                self.assertEqual(path[0], path[-1])
+                self.assertEqual(node, path[0])
+
