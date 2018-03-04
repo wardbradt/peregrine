@@ -100,24 +100,20 @@ class NegativeWeightFinderMulti:
 
         # todo: to find all edges, refactor this for loop. don't use edges. i believe that for every node, if
         # self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]] and this function yields on that
-        # iteration, it returns the same path accessible from edge[0]
+        # iteration, it returns the same path accessible from edge[0]. if ever, while retracing a loop, encountering a
+        # node which has already been encountered, will return a loop that has been returned previously.
         for edge in self.new_graph.edges(data=True):
             # todo: does this indicate that there is a negative cycle beginning and ending with edge[1]? or just that
             # edge[1] connects to a negative cycle?
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                # todo: what does relaxing the edges here do?
-                self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
-                self.predecessor_to[edge[1]].add(edge[0], self.distance_to[edge[0]] + edge[2]['weight'])
-                return self._retrace_negative_loop(edge[1], loop_from_source, source)
-
-        return self.new_graph, []
+                # print("data: {} {} {}".format(edge[0], edge[1], str(edge)))
+                yield self._retrace_negative_loop(edge[1], loop_from_source=loop_from_source, source=source)
 
     def _retrace_negative_loop(self, start, loop_from_source=False, source=''):
         """
         @:param loop_from_source: look at docstring of bellman_ford
         :return: negative loop path
         """
-
         arbitrage_loop = [start]
         # todo: could refactor to make the while statement `while next_node not in arbitrage_loop`
         if not loop_from_source:
