@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 - StackSet (In utils/data_structures.py)
 - get_greatest_edge_in_bunch, get_least_edge_in_bunch (In utils/graph_utils.py)
 - print_profit_opportunity_for_path_multi (In utils/general.py)
-- elements_next_to_each_other and last_index_in_list (In utils/misc.py)
+- next_to_each_other and last_index_in_list (In utils/misc.py)
 - tests/test_misc.py
 - tests/bellman_multi_graph_test.py
 - statement in print_profit_opportunity_for_path to account for empty paths

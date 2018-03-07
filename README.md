@@ -77,10 +77,11 @@ NEO to ETH at 0.1410783 = 100.93556429493631 on bittrex for NEO/ETH
 * Package for pip
 * Allow exchange objects (instead of exchange names) to be used as arguments for functions in several files (namely async_find_opportunities.py)
 * Write better examples and unit tests
-* Refactor bellmannx.py and bellman_multi_exchange.py to avoid two functions both named `bellman_ford_multi`
+* Refactor bellman_multi_graphy.py and bellmannx.py to avoid code repetition
 * Fix `print_profit_opportunity_for_path_multi` (look at comment in bellman_multi_graph.py for more information)
 ## Potential Enhancements
 * Create (better) data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities
 * Update cythonperegrine to reflect some of the changes to peregrine
 * Update doc strings to the same [standard](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard) as NumPy and SciPy
+* Research [this paper](https://networkx.github.io/documentation/stable/reference/readwrite/json_graph.html?highlight=json#module-networkx.readwrite.json_graph) which discusses a more efficient way of finding the best arbitrage opportunity. It would take much work to implement but if someone with experience in quantum computing could help me that would be great.
