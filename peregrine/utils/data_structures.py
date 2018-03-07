@@ -69,6 +69,7 @@ class PrioritySet:
             # Raises IndexError if done popping
             try:
                 popped = heapq.heappop(self.heap)
+            # for debugging
             except Exception as e:
                 raise e
 
@@ -81,6 +82,7 @@ class PrioritySet:
             while self.heap[0][1] in self.popped.keys():
                 # Raises IndexError if done popping
                 heapq.heappop(self.heap)
+        # for debugging
         except Exception as e:
             raise e
 

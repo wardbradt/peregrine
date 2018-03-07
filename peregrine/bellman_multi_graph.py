@@ -28,7 +28,7 @@ class NegativeWeightFinderMulti:
             self.predecessor_to[node] = PrioritySet()
             self.distance_from[node] = float('Inf')
             self.predecessor_from[node] = PrioritySet()
-        # The distance from any node to (itself) == 0
+        # The distance from any node to itself == 0
         self.distance_to[source] = 0
         self.distance_from[source] = 0
 
@@ -141,28 +141,7 @@ class NegativeWeightFinderMulti:
                     arbitrage_loop.insert(0, next_node)
                 # else, negative cycle is complete.
                 else:
-                    # self.predecessor_to[previous_node].pop()
                     arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
-                    # # the node in arbitrage_loop which source has the least weighted path to
-                    # min_distance_to_node = min(arbitrage_loop, key=lambda x: self.distance_to[x])
-
-                    # rotate so that min_distance_to_node is first in arbitrage_loop
-                    # todo: collections.deque might be more efficient for shifting the list. might not be because would
-                    # probably necessitate call to .index()
-                    # for i in range(len(arbitrage_loop)):
-                    #     if arbitrage_loop[0] != min_distance_to_node:
-                    #         # todo: will len(arbitrage_loop) always > 2? if not, this will cause errors.
-                    #         arbitrage_loop = arbitrage_loop[1:] + [arbitrage_loop[0]]
-                    #     else:
-                    #         break
-
-                    # todo: is this necessary?
-                    # min_distance_from_node = self._get_min_distance_from_node(arbitrage_loop)
-                    # for i in range(len(arbitrage_loop)):
-                    #     if arbitrage_loop[-1] != min_distance_from_node:
-                    #         arbitrage_loop.append(arbitrage_loop[i])
-                    #     else:
-                    #         break
 
                     # add the path from source -> min_distance_to_node to the beginning of arbitrage_loop
                     while arbitrage_loop[0] != source:
