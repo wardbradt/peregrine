@@ -28,7 +28,7 @@ class NegativeWeightFinderMulti:
             self.predecessor_to[node] = PrioritySet()
             self.distance_from[node] = float('Inf')
             self.predecessor_from[node] = PrioritySet()
-        # The distance from any node to (itself) == 0
+        # The distance from any node to itself == 0
         self.distance_to[source] = 0
         self.distance_from[source] = 0
 
@@ -42,10 +42,6 @@ class NegativeWeightFinderMulti:
         [self._process_edge_bunch(edge_bunch) for edge_bunch in self.graph.edge_bunches(data=True)]
 
     def _process_edge_bunch(self, edge_bunch):
-        """
-        todo: could easily refactor this for general usage. (e.g. not specifically for graphs with exchange_name
-        and market_name edge attributes
-        """
         ideal_edge = get_least_edge_in_bunch(edge_bunch)
         # todo: does this ever happen? if so, the least weighted edge in edge_bunch would have to be of infinite weight
         if ideal_edge['weight'] == float('Inf'):
@@ -88,8 +84,9 @@ class NegativeWeightFinderMulti:
             for edge in self.new_graph.edges(data=True):
                 if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                     self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
-                # important todo: there must be a more efficient way to order neighbors by preceding path weights
-                # move edge[0] to the end of self.predecessor[edge[1]]
+
+                # todo: there must be a more efficient way to order neighbors by preceding path weights
+                # no matter what, adds this edge to the PrioritySet in distance_to
                 self.predecessor_to[edge[1]].add(edge[0], self.distance_to[edge[0]] + edge[2]['weight'])
 
                 if self.distance_from[edge[1]] + edge[2]['weight'] < self.distance_from[edge[0]]:
@@ -98,10 +95,6 @@ class NegativeWeightFinderMulti:
                 self.predecessor_from[edge[0]].add(edge[1],
                                                    self.distance_from[edge[1]] + edge[2]['weight'])
 
-        # todo: to find all edges, refactor this for loop. don't use edges. i believe that for every node, if
-        # self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]] and this function yields on that
-        # iteration, it returns the same path accessible from edge[0]. if ever, while retracing a loop, encountering a
-        # node which has already been encountered, will return a loop that has been returned previously.
         for edge in self.new_graph.edges(data=True):
             # todo: does this indicate that there is a negative cycle beginning and ending with edge[1]? or just that
             # edge[1] connects to a negative cycle?
@@ -120,11 +113,9 @@ class NegativeWeightFinderMulti:
             next_node = start
             while True:
                 next_node = self.predecessor_to[next_node].pop()[1]
-                if next_node not in arbitrage_loop:
-                    arbitrage_loop.insert(0, next_node)
-                # else, negative cycle is complete.
-                else:
-                    arbitrage_loop.insert(0, next_node)
+                arbitrage_loop.insert(0, next_node)
+                # if negative cycle is complete
+                if next_node in arbitrage_loop:
                     arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
                     self.reset_predecessor_iteration()
                     return arbitrage_loop

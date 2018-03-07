@@ -84,4 +84,4 @@ NEO to ETH at 0.1410783 = 100.93556429493631 on bittrex for NEO/ETH
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities
 * Update cythonperegrine to reflect some of the changes to peregrine
 * Update doc strings to the same [standard](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard) as NumPy and SciPy
-* Research [this paper](https://networkx.github.io/documentation/stable/reference/readwrite/json_graph.html?highlight=json#module-networkx.readwrite.json_graph) which discusses a more efficient way of finding the best arbitrage opportunity. It would take much work to implement but if someone with experience in quantum computing could help me that would be great.
+* Research [this paper](http://www.quantumforquants.org/quantum-computing/qa-arbitrage/) which discusses a more efficient way of finding the best arbitrage opportunity. It would take much work to implement but if someone with experience in quantum computing could help me that would be great.
