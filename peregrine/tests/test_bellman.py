@@ -27,5 +27,5 @@ class TestBellmanFord(TestCase):
         paths = get_all_paths_for_graph(graph)
         for path in paths:
             ratio = calculate_profit_ratio_for_path(graph, path)
-            # because Python is not exact, ratio == 1.9999999999999996
+            # because Python float precision, ratio == 1.9999999999999996
             self.assertTrue(within_one_percent(ratio, 2))

@@ -1,6 +1,5 @@
 from unittest import TestCase
-from peregrine import bellman_ford_multi, calculate_profit_for_path_multi, \
-    multi_digraph_from_json, multi_digraph_from_dict
+from peregrine import bellman_ford_multi, multi_digraph_from_json, multi_digraph_from_dict, calculate_profit_ratio_for_path
 import json
 import networkx as nx
 
@@ -59,7 +58,7 @@ class TestBellmanFordMultiGraph(TestCase):
             for path in paths:
                 if path:
                     # assert that the path is a negative weight cycle
-                    ratio = calculate_profit_for_path_multi(new_graph, path)
+                    ratio = calculate_profit_ratio_for_path(new_graph, path)
                     # python float precision may round some numbers to 1.0.
                     self.assertGreaterEqual(ratio, 1.0)
 
