@@ -143,13 +143,8 @@ class NegativeWeightFinderMulti:
                     self.predecessor_to[arbitrage_loop[0]].pop()
 
                     def pop_arbitrage_loop(loop, predecessor):
-                        if loop == ['BCH', 'USD', 'LTC', 'USD', 'USDT', 'USD', 'ETH', 'USD', 'XRP', 'EUR', 'BCH', 'EUR', 'BTC', 'USD', 'BCH']:
-                            print()
-                        try:
-                            while predecessor[arbitrage_loop[0]].empty:
-                                loop.pop(0)
-                        except Exception as e:
-                            raise e
+                        while predecessor[arbitrage_loop[0]].empty:
+                            loop.pop(0)
 
                     # add the path from source -> min_distance_to_node to the beginning of arbitrage_loop
                     while arbitrage_loop[0] != source:
@@ -170,8 +165,6 @@ class NegativeWeightFinderMulti:
 
                             next_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
 
-                        if arbitrage_loop == ['USD', 'LTC', 'USD', 'USDT', 'USD', 'ETH', 'USD', 'XRP', 'EUR', 'BCH', 'EUR', 'BTC', 'USD', 'BCH']:
-                            print()
                         arbitrage_loop.insert(0, next_node)
 
                     # add the path from arbitrage_loop[-1] -> source to the end of arbitrage_loop
