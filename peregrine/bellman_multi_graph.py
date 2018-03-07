@@ -14,7 +14,7 @@ class NegativeWeightFinderMulti:
         # Because cannot modify graph's edges while iterating over its edge_bunches, must create new graph
         # graph with lowest ask and highest bid
         self.new_graph = nx.DiGraph()
-        # A dict keyed by node n1 and valued by StackSets of preceding nodes (the node n2 at top
+        # A dict keyed by node n1 and valued by PrioritySets of preceding nodes (the node n2 at top
         # of each queue has least weighted edge n2 -> n1 in stack. queue should be in ascending order of edge weights).
         self.predecessor_to = {}
         self.distance_to = {}
@@ -123,29 +123,44 @@ class NegativeWeightFinderMulti:
             if source not in self.new_graph:
                 raise ValueError("source not in graph.")
 
+            # todo: refactor this so it is not while True, instead while not next_to_each_other
             while True:
                 next_node = self.predecessor_to[arbitrage_loop[0]].peek()[1]
-                # if this edge has not been traversed over, add it to arbitrage_loop
-                if not next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
-                    arbitrage_loop.insert(0, next_node)
-                # else, negative cycle is complete.
-                else:
+                arbitrage_loop.insert(0, next_node)
+
+                # if this edge has been traversed over, negative cycle is complete.
+                if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[1]):
                     arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
+                    self.predecessor_to[arbitrage_loop[0]].pop()
+
+                    def pop_arbitrage_loop(loop, predecessor):
+                        while predecessor[arbitrage_loop[0]].empty:
+                            loop.pop(0)
 
                     # add the path from source -> min_distance_to_node to the beginning of arbitrage_loop
                     while arbitrage_loop[0] != source:
-                        next_node = self.predecessor_to[arbitrage_loop[0]].peek()[1]
+                        pop_arbitrage_loop(arbitrage_loop, self.predecessor_to)
+                        next_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
                         # if this edge has already been traversed over/ added to arbitrage_loop, must exit the cycle.
                         if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
-                            # next_node equals the second least predecessor of arbitrage_loop[0] so as to not reenter a
-                            # negative cycle
                             self.predecessor_to[arbitrage_loop[0]].pop()
+                            # this prevents an error where every edge from a node has been traversed over.
+                            # todo: how could we (efficiently) find the last closed loop? it would be best to pop from
+                            # its predecessors.
+                            pop_arbitrage_loop(arbitrage_loop, self.predecessor_to)
+                            # try:
+                            #     while self.predecessor_to[arbitrage_loop[0]].empty:
+                            #         arbitrage_loop.pop(0)
+                            # except Exception as e:
+                            #     raise e
+
                             next_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
+
                         arbitrage_loop.insert(0, next_node)
 
                     # add the path from arbitrage_loop[-1] -> source to the end of arbitrage_loop
-                    if source == 'REP':
-                        print()
+                    # if source == 'REP':
+                        # print()
                     # while the last element in arbitrage_loop != source
                     while arbitrage_loop[-1] != source:
                         next_node = self.predecessor_from[arbitrage_loop[-1]].peek()[1]

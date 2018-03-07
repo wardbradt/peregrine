@@ -91,11 +91,19 @@ class PrioritySet:
     def reset(self):
         """
         Not optimized, slow.
-        # todo: optimize this method. how to account for the fact that self.popped is added in order?
+        todo: optimize this method. how to account for the fact that self.popped is added in order?
         """
         for key, value in self.popped.items():
             heapq.heappush(self.heap, (value, key))
         self.popped = {}
+
+    @property
+    def empty(self):
+        for elem in self.heap:
+            if elem[1] not in self.popped.keys():
+                return False
+
+        return True
 
     def __str__(self):
         return str(list(self.heap))
@@ -105,12 +113,13 @@ class PrioritySet:
 
     def __len__(self):
         """
-        Not optimized. Slow.
+        Somewhat slow. (I think O(n^2))
         """
         total = 0
+        seen = set()
         for elem in self.heap:
-            for popped in self.popped:
-                if elem == popped:
-                    total += 1
+            if elem not in self.popped and elem not in seen:
+                total += 1
+                seen.add(elem)
 
-        return len(self.heap) - total
+        return total
