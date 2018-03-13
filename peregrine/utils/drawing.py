@@ -14,8 +14,6 @@ def format_graph_for_json(graph, raise_errors=True):
     """
     Currently, only supported types for graph are Graph, DiGraph, MultiGraph, and MultiDiGraph. graph must
     be an instance of one of these types, not a class that inherits from one.
-    :param raise_errors:
-    :param graph:
     """
     graph_dict = nx.to_dict_of_dicts(graph)
     graph_type = ''

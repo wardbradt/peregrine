@@ -26,8 +26,12 @@ class NegativeWeightFinder:
 
     def bellman_ford(self, source, loop_from_source=False):
         """
-        :param loop_from_source:
-        :param source: The node in graph from which the values in distance_to will be calculated.
+        :param loop_from_source: if true, will return the path beginning and ending at source. Note: this may cause the
+        path to be a positive-weight cycle (if traversed straight through). Because a negative cycle exists in the path,
+        (and it can be traversed infinitely many times), the path is negative. This is still in development and is
+        certainly not optimized. It is not an implementation of an algorithm that I know of but one that I have created
+        (without too much weight on the optimization, more so on simply completing it).
+        :param source: The node in graph from which the values in distance_to and distance_from will be calculated.
         """
         self.initialize(source)
         # After len(graph) - 1 passes, algorithm is complete.
@@ -68,12 +72,14 @@ class NegativeWeightFinder:
             next_node = start
             while True:
                 next_node = self.predecessor_to[next_node].pop()[1]
-                arbitrage_loop.insert(0, next_node)
                 # if negative cycle is complete
                 if next_node in arbitrage_loop:
                     arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
+                    arbitrage_loop.insert(0, next_node)
                     self.reset_predecessor_iteration()
                     return arbitrage_loop
+
+                arbitrage_loop.insert(0, next_node)
         else:
             if source not in self.graph:
                 raise ValueError("source not in graph.")

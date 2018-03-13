@@ -45,12 +45,12 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
 
         self.new_graph.add_edge(edge_bunch[0], edge_bunch[1], **ideal_edge)
 
+        # todo: these conditionals are rarely both true. how to detect when this is the case?
         if self.distance_to[edge_bunch[0]] + ideal_edge['weight'] < self.distance_to[edge_bunch[1]]:
             self.distance_to[edge_bunch[1]] = self.distance_to[edge_bunch[0]] + ideal_edge['weight']
         self.predecessor_to[edge_bunch[1]].add(edge_bunch[0],
                                                self.distance_to[edge_bunch[0]] + ideal_edge['weight'])
 
-        # todo: these conditionals are rarely both true. how to detect when this is the case?
         if self.distance_from[edge_bunch[1]] + ideal_edge['weight'] < self.distance_from[edge_bunch[0]]:
             self.distance_from[edge_bunch[0]] = self.distance_from[edge_bunch[1]] + ideal_edge['weight']
         self.predecessor_from[edge_bunch[0]].add(edge_bunch[1],
