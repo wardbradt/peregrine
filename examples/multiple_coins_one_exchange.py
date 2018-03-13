@@ -1,6 +1,5 @@
 import asyncio
-from utils.single_exchange import load_exchange_graph
-from utils.general import print_profit_opportunity_for_path
+from peregrine import load_exchange_graph, print_profit_opportunity_for_path
 from bellmannx import NegativeWeightFinder
 
 
