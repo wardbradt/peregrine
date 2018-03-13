@@ -10,7 +10,6 @@ def create_exchange_graph(exchange: ccxt.Exchange):
     Returns a simple graph representing exchange. Each edge represents a market.
 
     exchange.load_markets() must have been called. Will throw a ccxt error if it has not.
-    todo: check which error.
     """
     graph = nx.Graph()
     for market_name in exchange.symbols:
@@ -28,20 +27,23 @@ def create_exchange_graph(exchange: ccxt.Exchange):
 async def load_exchange_graph(exchange_name) -> nx.DiGraph:
     """
     Returns a DiGraph as described in populate_exchange_graph
-    Not optimized.
     """
     exchange = getattr(ccxt, exchange_name)()
     await exchange.load_markets()
-    graph = create_exchange_graph(exchange)
-    return await populate_exchange_graph(graph, exchange, log=True)
+
+    graph = nx.DiGraph()
+
+    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True)
+             for market_name in exchange.symbols]
+    await asyncio.wait(tasks)
+
+    return graph
 
 
 async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=True) -> nx.DiGraph:
     """
     Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
     edges)
-
-    Not optimized (because checks if log)
     """
     result = nx.DiGraph()
 
@@ -52,7 +54,7 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
     return result
 
 
-async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.Graph, log=True):
+async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True):
     try:
         ticker = await exchange.fetch_ticker(market_name)
     # any error is solely because of fetch_ticker
