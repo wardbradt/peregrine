@@ -79,6 +79,7 @@ NEO to ETH at 0.1410783 = 100.93556429493631 on bittrex for NEO/ETH
 * Write better examples and unit tests
 * Refactor bellman_multi_graphy.py and bellmannx.py to avoid code repetition
 * Fix `print_profit_opportunity_for_path_multi` (look at comment in bellman_multi_graph.py for more information)
+* Implement `amount` parameter in bellman_ford to find cycles using at maximum the given amount.
 ## Potential Enhancements
 * Create (better) data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities

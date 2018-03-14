@@ -24,11 +24,13 @@ def create_exchange_graph(exchange: ccxt.Exchange):
     return graph
 
 
-async def load_exchange_graph(exchange_name) -> nx.DiGraph:
+async def load_exchange_graph(exchange, name=True) -> nx.DiGraph:
     """
     Returns a DiGraph as described in populate_exchange_graph
     """
-    exchange = getattr(ccxt, exchange_name)()
+    if name:
+        exchange = getattr(ccxt, exchange)()
+
     await exchange.load_markets()
 
     graph = nx.DiGraph()
