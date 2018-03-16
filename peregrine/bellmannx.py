@@ -24,7 +24,7 @@ class NegativeWeightFinder:
         self.distance_to[source] = 0
         self.distance_from[source] = 0
 
-    def bellman_ford(self, source, loop_from_source=False):
+    def bellman_ford(self, source, loop_from_source=False, ensure_profit=False):
         """
         :param loop_from_source: if true, will return the path beginning and ending at source. Note: this may cause the
         path to be a positive-weight cycle (if traversed straight through). Because a negative cycle exists in the path,
@@ -43,7 +43,10 @@ class NegativeWeightFinder:
 
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                yield self._retrace_negative_loop(edge[1], loop_from_source=loop_from_source, source=source)
+                yield self._retrace_negative_loop(edge[1],
+                                                  loop_from_source=loop_from_source,
+                                                  source=source,
+                                                  ensure_profit=ensure_profit)
 
     def relax(self, edge):
         if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
@@ -61,7 +64,7 @@ class NegativeWeightFinder:
 
         return True
 
-    def _retrace_negative_loop(self, start, loop_from_source=False, source=''):
+    def _retrace_negative_loop(self, start, loop_from_source=False, source='', ensure_profit=False):
         """
         @:param loop_from_source: look at docstring of bellman_ford
         :return: negative loop path
@@ -92,15 +95,33 @@ class NegativeWeightFinder:
                 # if this edge has been traversed over, negative cycle is complete.
                 if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[1]):
                     arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
+
+                    if ensure_profit:
+                        # the weight of the path that will be taken to make arbitrage_loop start and end at source
+                        return_path_weight = self.distance_to[arbitrage_loop[0]] + self.distance_from[arbitrage_loop[-1]]
+                        loop_weight = 0
+                        if return_path_weight > 0:
+                            # todo: this is not the most efficient way to get the weight of arbitrage_loop
+                            for i in range(len(arbitrage_loop) - 1):
+                                loop_weight += self.graph[arbitrage_loop[i]][arbitrage_loop[i + 1]]['weight']
+
+                            scalar = return_path_weight / abs(loop_weight) + 1
+                            if scalar.is_integer():
+                                scalar += 1
+                            else:
+                                scalar = math.ceil(scalar)
+
+                            arbitrage_loop *= scalar
+
                     self.predecessor_to[arbitrage_loop[0]].pop()
 
-                    def pop_arbitrage_loop(loop, predecessor):
-                        while predecessor[arbitrage_loop[0]].empty:
+                    def _pop_arbitrage_loop(loop, predecessor):
+                        while predecessor[loop[0]].empty:
                             loop.pop(0)
 
                     # add the path from source -> min_distance_to_node to the beginning of arbitrage_loop
                     while arbitrage_loop[0] != source:
-                        pop_arbitrage_loop(arbitrage_loop, self.predecessor_to)
+                        _pop_arbitrage_loop(arbitrage_loop, self.predecessor_to)
                         next_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
                         # if this edge has already been traversed over/ added to arbitrage_loop, must exit the cycle.
                         if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
@@ -108,12 +129,7 @@ class NegativeWeightFinder:
                             # this prevents an error where every edge from a node has been traversed over.
                             # todo: how could we (efficiently) find the last closed loop? it would be best to pop from
                             # its predecessors.
-                            pop_arbitrage_loop(arbitrage_loop, self.predecessor_to)
-                            # try:
-                            #     while self.predecessor_to[arbitrage_loop[0]].empty:
-                            #         arbitrage_loop.pop(0)
-                            # except Exception as e:
-                            #     raise e
+                            _pop_arbitrage_loop(arbitrage_loop, self.predecessor_to)
 
                             next_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
 
@@ -141,8 +157,8 @@ class NegativeWeightFinder:
             self.predecessor_from[node].reset()
 
 
-def bellman_ford(graph, source):
-    return NegativeWeightFinder(graph).bellman_ford(source)
+def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False):
+    return NegativeWeightFinder(graph).bellman_ford(source, loop_from_source, ensure_profit)
 
 
 def calculate_profit_ratio_for_path(graph, path):
