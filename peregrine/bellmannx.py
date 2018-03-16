@@ -26,6 +26,10 @@ class NegativeWeightFinder:
 
     def bellman_ford(self, source, loop_from_source=False, ensure_profit=False):
         """
+        :param ensure_profit: if true, ensures that the weight of the returned path is greater able to be arbitraged
+        for a profit. if false, the resultant path may not be profitable because although it contains a negative cycle
+        (arbitrage-able loop), the weight of the paths to and from that cycle are more positive than the absolute value
+        of the negative cycle, rendering the path as a whole positive.
         :param loop_from_source: if true, will return the path beginning and ending at source. Note: this may cause the
         path to be a positive-weight cycle (if traversed straight through). Because a negative cycle exists in the path,
         (and it can be traversed infinitely many times), the path is negative. This is still in development and is
@@ -158,6 +162,9 @@ class NegativeWeightFinder:
 
 
 def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False):
+    """
+    Look at the docstring of the bellman_ford method in the NegativeWeightFinder class as this is a wrapper method.
+    """
     return NegativeWeightFinder(graph).bellman_ford(source, loop_from_source, ensure_profit)
 
 
