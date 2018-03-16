@@ -29,7 +29,7 @@ class NegativeWeightFinder:
         :param ensure_profit: if true, ensures that the weight of the returned path is greater able to be arbitraged
         for a profit. if false, the resultant path may not be profitable because although it contains a negative cycle
         (arbitrage-able loop), the weight of the paths to and from that cycle are more positive than the absolute value
-        of the negative cycle, rendering the path as a whole positive.
+        of the negative cycle, rendering the path as a whole positive. Still in development, does not currently work.
         :param loop_from_source: if true, will return the path beginning and ending at source. Note: this may cause the
         path to be a positive-weight cycle (if traversed straight through). Because a negative cycle exists in the path,
         (and it can be traversed infinitely many times), the path is negative. This is still in development and is
@@ -91,13 +91,16 @@ class NegativeWeightFinder:
             if source not in self.graph:
                 raise ValueError("source not in graph.")
 
+            next_node = self.predecessor_to[arbitrage_loop[0]].peek()[1]
+            arbitrage_loop.insert(0, next_node)
+
             # todo: refactor this so it is not while True, instead while not next_to_each_other
             while True:
                 next_node = self.predecessor_to[arbitrage_loop[0]].peek()[1]
-                arbitrage_loop.insert(0, next_node)
 
                 # if this edge has been traversed over, negative cycle is complete.
-                if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[1]):
+                if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
+                    arbitrage_loop.insert(0, next_node)
                     arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
 
                     if ensure_profit:
@@ -153,6 +156,9 @@ class NegativeWeightFinder:
 
                     self.reset_predecessor_iteration()
                     return arbitrage_loop
+
+                else:
+                    arbitrage_loop.insert(0, next_node)
 
     def reset_predecessor_iteration(self):
         for node in self.predecessor_to.keys():

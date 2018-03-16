@@ -1,5 +1,6 @@
 from unittest import TestCase
-from peregrine import bellman_ford_multi, multi_digraph_from_json, multi_digraph_from_dict, calculate_profit_ratio_for_path
+from peregrine import bellman_ford_multi, multi_digraph_from_json, multi_digraph_from_dict, \
+    calculate_profit_ratio_for_path, bellman_ford
 import json
 import networkx as nx
 
@@ -70,4 +71,22 @@ class TestBellmanFordMultiGraph(TestCase):
                 if path:
                     self.assertEqual(path[0], path[-1])
                     self.assertEqual(node, path[0])
+
+
+class TestBellmannx(TestCase):
+
+    def test_ensure_profit_yields_profit(self):
+        graph = nx.DiGraph()
+        graph.add_edge(0, 1, weight=4)
+        graph.add_edge(1, 0, weight=3)
+        graph.add_edge(1, 2, weight=-1)
+        graph.add_edge(2, 3, weight=-1)
+        graph.add_edge(3, 1, weight=-1)
+        paths = bellman_ford(graph, 0, loop_from_source=True, ensure_profit=True)
+        for path in paths:
+            weight = 0
+            for i in range(len(path) - 1):
+                weight += graph[path[i]][path[i + 1]]['weight']
+            self.assertLess(weight, 0)
+
 

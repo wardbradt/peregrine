@@ -1,7 +1,7 @@
-def next_to_each_other(list_to_check: list, *args):
+def next_to_each_other(li: list, *args):
     """
     Tests if the elements in args are present in the list in the order that they are given
-
+    todo: is there an error if len(args) > len(li)?
     Examples
     --------
     >>> l = [0, 1, 2]
@@ -13,9 +13,9 @@ def next_to_each_other(list_to_check: list, *args):
     Thanks in part to
     https://stackoverflow.com/questions/32533820/checking-items-in-a-list-to-see-if-they-are-beside-each-other
     """
-    for i in range(len(list_to_check) - (len(args) - 1)):
+    for i in range(len(li) - (len(args) - 1)):
         for j in range(len(args)):
-            if list_to_check[i + j] != args[j]:
+            if li[i + j] != args[j]:
                 break
             if j == len(args) - 1:
                 return True
