@@ -38,20 +38,21 @@ print(opportunity)
 ### One Exchange/ Multiple Currencies
 ```python
 import asyncio
-from peregrine import load_exchange_graph, bellman_ford_multi, print_profit_opportunity_for_path_multi
-loop = asyncio.get_event_loop()
-graph = loop.run_until_complete(load_exchange_graph('binance')) # load_exchange_graph is asynchronous
-path = bellman_ford_multi(graph, 'LTC')
-print_profit_opportunity_for_path_multi(graph, path)
+from peregrine import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
+graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph('binance'))
+
+paths = bellman_ford(graph, 'BTC')
+for path in paths:
+    print_profit_opportunity_for_path(graph, path)
 ```
-This prints the following in under a second (plus the time waiting for the API response from Binance):
+This prints all of the arbitrage opportunities on the given exchange (in this case, Binance). At the time of writing, the first opportunity printed out is:
 ```
 Starting with 100 in BTC
-BTC to AMB at 17943.656917 = 1794365.691728
-AMB to BNB at 0.062210 = 111627.489682
-BNB to USDT at 10.181700 = 1136557.611699
-USDT to BCH at 0.000714 = 811.826865
-BCH to BTC at 0.124012 = 100.676273
+BTC to USDT at 7955.100000 = 795510.000000
+USDT to NEO at 0.016173 = 12866.084425
+NEO to ETH at 0.110995 = 1428.071041
+ETH to XLM at 2709.292875 = 3869062.695088
+XLM to BTC at 0.000026 = 100.208724
 ```
 ### Multiple Exchanges/ Multiple Currencies
 ```python
@@ -59,18 +60,24 @@ from peregrine import create_weighted_multi_exchange_digraph, bellman_ford_multi
 
 
 graph = create_weighted_multi_exchange_digraph(['exmo', 'bittrex', 'gemini'], log=True)
-path = bellman_ford_multi(graph, 'ETH')
-print_profit_opportunity_for_path_multi(graph, path)
+graph, paths = bellman_ford_multi(graph, 'ETH')
+for path in paths:
+    print_profit_opportunity_for_path_multi(graph, path)
 ```
-This prints:
+This prints all of the arbitrage opportunities on the given exchanges. At the time of writing, the first opportunity printed out is:
 ```
-Starting with 100 in ETH
-ETH to XRP at 875.848478213269 = 87584.8478213269 on bittrex for XRP/ETH
-XRP to EUR at 0.83136 = 72814.53908473832 on kraken for XRP/EUR
-EUR to XMR at 0.004197095609837993 = 305.6095823249322 on kraken for XMR/EUR
-XMR to USDT at 295.1404826099999 = 90197.75961762098 on bittrex for XMR/USDT
-USDT to NEO at 0.007932101213611488 = 715.4577585279686 on bittrex for NEO/USDT
-NEO to ETH at 0.1410783 = 100.93556429493631 on bittrex for NEO/ETH
+ETH to ANT at 204.26088199848851 = 20426.08819984885 on bittrex for ANT/ETH
+ANT to BTC at 0.00034417000000000003 = 7.03004677574198 on bittrex for ANT/BTC
+BTC to MLN at 136.57526594618665 = 960.1305080110928 on bittrex for MLN/BTC
+MLN to BTC at 0.0073799999999999985 = 7.085763149121863 on kraken for MLN/BTC
+BTC to GNO at 98.03921568627446 = 694.6826616786137 on bittrex for GNO/BTC
+GNO to BTC at 0.010300000000000002 = 7.155231415289722 on kraken for GNO/BTC
+BTC to GNO at 98.03921568627446 = 701.493276008796 on bittrex for GNO/BTC
+GNO to BTC at 0.010300000000000002 = 7.2253807428906 on kraken for GNO/BTC
+BTC to MLN at 136.57526594618665 = 986.8082965227394 on bittrex for MLN/BTC
+MLN to BTC at 0.0073799999999999985 = 7.282645228337815 on kraken for MLN/BTC
+BTC to USD at 7964.809999999999 = 58004.8855411173 on gemini for BTC/USD
+USD to ETH at 0.0017965900720432618 = 104.21100149317708 on kraken for ETH/USD
 ```
 ## To Do
 * Implement a fix to convert from USDT to USD and back again for markets based on USDT

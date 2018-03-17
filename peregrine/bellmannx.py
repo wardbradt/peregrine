@@ -24,7 +24,7 @@ class NegativeWeightFinder:
         self.distance_to[source] = 0
         self.distance_from[source] = 0
 
-    def bellman_ford(self, source, loop_from_source=False, ensure_profit=False):
+    def bellman_ford(self, source, loop_from_source=True, ensure_profit=False):
         """
         :param ensure_profit: if true, ensures that the weight of the returned path is greater able to be arbitraged
         for a profit. if false, the resultant path may not be profitable because although it contains a negative cycle
@@ -167,7 +167,7 @@ class NegativeWeightFinder:
             self.predecessor_from[node].reset()
 
 
-def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False):
+def bellman_ford(graph, source, loop_from_source=True, ensure_profit=False):
     """
     Look at the docstring of the bellman_ford method in the NegativeWeightFinder class as this is a wrapper method.
     """
