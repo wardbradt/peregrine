@@ -3,6 +3,10 @@ import networkx as nx
 from utils import last_index_in_list, PrioritySet, next_to_each_other
 
 
+class SeenNodeError(Exception):
+    pass
+
+
 class NegativeWeightFinder:
 
     def __init__(self, graph: nx.Graph):
@@ -11,6 +15,8 @@ class NegativeWeightFinder:
         self.distance_to = {}
         self.predecessor_from = {}
         self.distance_from = {}
+
+        self.seen_nodes = set()
     
     def initialize(self, source):
         for node in self.graph:
@@ -24,8 +30,9 @@ class NegativeWeightFinder:
         self.distance_to[source] = 0
         self.distance_from[source] = 0
 
-    def bellman_ford(self, source, loop_from_source=True, ensure_profit=False):
+    def bellman_ford(self, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
         """
+        :param unique_paths:
         :param ensure_profit: if true, ensures that the weight of the returned path is greater able to be arbitraged
         for a profit. if false, the resultant path may not be profitable because although it contains a negative cycle
         (arbitrage-able loop), the weight of the paths to and from that cycle are more positive than the absolute value
@@ -47,10 +54,14 @@ class NegativeWeightFinder:
 
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                yield self._retrace_negative_loop(edge[1],
-                                                  loop_from_source=loop_from_source,
-                                                  source=source,
-                                                  ensure_profit=ensure_profit)
+                try:
+                    yield self._retrace_negative_loop(edge[1],
+                                                      loop_from_source=loop_from_source,
+                                                      source=source,
+                                                      ensure_profit=ensure_profit,
+                                                      unique_paths=unique_paths)
+                except SeenNodeError:
+                    continue
 
     def relax(self, edge):
         if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
@@ -68,11 +79,14 @@ class NegativeWeightFinder:
 
         return True
 
-    def _retrace_negative_loop(self, start, loop_from_source=False, source='', ensure_profit=False):
+    def _retrace_negative_loop(self, start, loop_from_source=False, source='', ensure_profit=False, unique_paths=False):
         """
         @:param loop_from_source: look at docstring of bellman_ford
         :return: negative loop path
         """
+        if unique_paths and start in self.seen_nodes:
+            raise SeenNodeError
+
         arbitrage_loop = [start]
         # todo: could refactor to make the while statement `while next_node not in arbitrage_loop`
         if not loop_from_source:
@@ -86,12 +100,23 @@ class NegativeWeightFinder:
                     self.reset_predecessor_iteration()
                     return arbitrage_loop
 
+                # if next_node in arbitrage_loop, next_node in self.seen_nodes. thus, this conditional must proceed
+                # checking if next_node in arbitrage_loop
+                if unique_paths and next_node in self.seen_nodes:
+                    raise SeenNodeError(next_node)
+
                 arbitrage_loop.insert(0, next_node)
+                self.seen_nodes.add(next_node)
         else:
             if source not in self.graph:
                 raise ValueError("source not in graph.")
 
+            # todo: i do not remember to which edge case this refers, test to see which then specify in the comment.
+            # adding the predecessor to start to arbitrage loop outside the while loop prevents an edge case.
             next_node = self.predecessor_to[arbitrage_loop[0]].peek()[1]
+            if unique_paths and next_node in self.seen_nodes:
+                raise SeenNodeError(next_node)
+
             arbitrage_loop.insert(0, next_node)
 
             # todo: refactor this so it is not while True, instead while not next_to_each_other
@@ -102,6 +127,7 @@ class NegativeWeightFinder:
                 if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
                     arbitrage_loop.insert(0, next_node)
                     arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
+                    # print("found loop starting at: " + next_node)
 
                     if ensure_profit:
                         # the weight of the path that will be taken to make arbitrage_loop start and end at source
@@ -147,10 +173,6 @@ class NegativeWeightFinder:
                         next_node = self.predecessor_from[arbitrage_loop[-1]].peek()[1]
                         if next_to_each_other(arbitrage_loop, arbitrage_loop[-1], next_node):
                             self.predecessor_from[arbitrage_loop[-1]].pop()
-                            # next_node equals the second least predecessor_to of arbitrage_loop[-1] so as to not reenter a
-                            # negative cycle
-                            # try:
-                            #     next_node = self.predecessor_from[arbitrage_loop[-1]].pop()[1]
 
                         arbitrage_loop.append(next_node)
 
@@ -158,7 +180,11 @@ class NegativeWeightFinder:
                     return arbitrage_loop
 
                 else:
+                    if unique_paths and next_node in self.seen_nodes:
+                        raise SeenNodeError(next_node)
+
                     arbitrage_loop.insert(0, next_node)
+                    self.seen_nodes.add(next_node)
 
     def reset_predecessor_iteration(self):
         for node in self.predecessor_to.keys():
@@ -167,11 +193,11 @@ class NegativeWeightFinder:
             self.predecessor_from[node].reset()
 
 
-def bellman_ford(graph, source, loop_from_source=True, ensure_profit=False):
+def bellman_ford(graph, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
     """
     Look at the docstring of the bellman_ford method in the NegativeWeightFinder class as this is a wrapper method.
     """
-    return NegativeWeightFinder(graph).bellman_ford(source, loop_from_source, ensure_profit)
+    return NegativeWeightFinder(graph).bellman_ford(source, loop_from_source, ensure_profit, unique_paths=unique_paths)
 
 
 def calculate_profit_ratio_for_path(graph, path):
