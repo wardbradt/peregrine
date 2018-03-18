@@ -4,7 +4,7 @@ A Python library which provides several algorithms to detect arbitrage opportuni
 **In order to use the features that implement [Networkx](https://github.com/networkx/networkx), you must use [my fork](https://github.com/wardbradt/networkx) to avoid errors.**
 
 ## Finding Arbitrage Opportunities: Example Usage
-This section provides a brief overview of Peregrine's main uses. So as to not clutter this document, more examples demonstrating many features not dicussed here are available in [peregrine/examples](https://github.com/wardbradt/peregrine/tree/master/examples).
+This section provides a brief overview of Peregrine's functionality. Examples demonstrating many more features are available in [peregrine/examples](https://github.com/wardbradt/peregrine/tree/master/examples).
 ### Multiples Exchange/ One Currency
 ```python
 from peregrine import get_opportunity_for_market
