@@ -64,6 +64,7 @@ for path in paths:
 ```
 This prints all of the arbitrage opportunities on the given exchanges. At the time of writing, the first opportunity printed out is:
 ```
+Starting with 100 in ETH
 ETH to ANT at 204.26088199848851 = 20426.08819984885 on bittrex for ANT/ETH
 ANT to BTC at 0.00034417000000000003 = 7.03004677574198 on bittrex for ANT/BTC
 BTC to MLN at 136.57526594618665 = 960.1305080110928 on bittrex for MLN/BTC
