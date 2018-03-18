@@ -2,8 +2,6 @@
 
 A Python library which provides several algorithms to detect arbitrage opportunities across over 90 cryptocurrency markets in 34 countries.
 
-**In order to use the features that implement [Networkx](https://github.com/networkx/networkx), you must use [my fork](https://github.com/wardbradt/networkx) to avoid errors.**
-
 ## Finding Arbitrage Opportunities: Example Usage
 
 This section provides a brief overview of Peregrine's functionality. Examples demonstrating many more features are available in [peregrine/examples](https://github.com/wardbradt/peregrine/tree/master/examples).
