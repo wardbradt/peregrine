@@ -81,10 +81,7 @@ USD to ETH at 0.0017965900720432618 = 104.21100149317708 on kraken for ETH/USD
 ## To Do
 * Implement a fix to convert from USDT to USD and back again for markets based on USDT
 * Package for pip
-* Allow exchange objects (instead of exchange names) to be used as arguments for functions in several files (namely async_find_opportunities.py)
-* Write better examples and unit tests
-* Refactor bellman_multi_graphy.py and bellmannx.py to avoid code repetition
-* Fix `print_profit_opportunity_for_path_multi` (look at comment in bellman_multi_graph.py for more information)
+* Write better/ more examples and unit tests
 ## Potential Enhancements
 * Create (better) data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities
