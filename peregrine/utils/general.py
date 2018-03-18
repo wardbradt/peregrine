@@ -1,6 +1,5 @@
 import json
 import math
-
 import networkx as nx
 from ccxt import async as ccxt
 

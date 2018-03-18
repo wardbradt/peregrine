@@ -47,12 +47,21 @@ def multi_digraph_from_json(file_name: str):
     return multi_digraph_from_dict(data)
 
 
+def digraph_from_dict(data):
+    G = nx.DiGraph()
+    for node in data.keys():
+        neighbors = data[node]
+        for neighbor, attributes in neighbors.items():
+            G.add_edge(node, neighbor, weight=attributes["weight"])
+    return G
+
+
 def multi_digraph_from_dict(data):
     G = nx.MultiDiGraph()
     for node in data.keys():
         neighbors = data[node]
         for neighbor, v in neighbors.items():
-            for key, data_dict in v.items():
+            for data_dict in v.values():
                 G.add_edge(node, neighbor, **data_dict)
 
     return G
