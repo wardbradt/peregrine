@@ -127,9 +127,14 @@ class NegativeWeightFinder:
                 if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
                     arbitrage_loop.insert(0, next_node)
                     arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
-                    # print("found loop starting at: " + next_node)
 
                     if ensure_profit:
+                        # todo: is this inefficient because it iterates over arbitrage_loop twice? once to check if in,
+                        # once to get index?
+                        if source in arbitrage_loop:
+                            index = arbitrage_loop.index(source)
+                            arbitrage_loop = arbitrage_loop[index:] + arbitrage_loop[:index]
+
                         # the weight of the path that will be taken to make arbitrage_loop start and end at source
                         return_path_weight = self.distance_to[arbitrage_loop[0]] + self.distance_from[arbitrage_loop[-1]]
                         loop_weight = 0
