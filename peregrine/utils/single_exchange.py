@@ -1,8 +1,8 @@
 import asyncio
 import math
-
 import networkx as nx
 from ccxt import async as ccxt
+import warnings
 
 
 def create_exchange_graph(exchange: ccxt.Exchange):
@@ -24,7 +24,7 @@ def create_exchange_graph(exchange: ccxt.Exchange):
     return graph
 
 
-async def load_exchange_graph(exchange, name=True) -> nx.DiGraph:
+async def load_exchange_graph(exchange, name=True, fees=False) -> nx.DiGraph:
     """
     Returns a DiGraph as described in populate_exchange_graph
     """
@@ -33,9 +33,20 @@ async def load_exchange_graph(exchange, name=True) -> nx.DiGraph:
 
     await exchange.load_markets()
 
+    fee = 0
+    if fees:
+        if 'maker' in exchange.fees['trading']:
+            fee = exchange.fees['trading']['maker']
+        else:
+            warnings.warn("The fees for {} have not yet been implemented into the library. Values will be calculated"
+                          "estimating a .2% maker fee.".format(exchange))
+            fee = 0.002
+
+    # print("a: " + str(exchange.fees))
+
     graph = nx.DiGraph()
 
-    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True)
+    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fee=fee)
              for market_name in exchange.symbols]
     await asyncio.wait(tasks)
 
@@ -56,12 +67,15 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
     return result
 
 
-async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True):
+async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True, fee=0):
     try:
         ticker = await exchange.fetch_ticker(market_name)
     # any error is solely because of fetch_ticker
     except:
+        warnings.warn("Market {} is unavailable at this time.".format(market_name))
         return
+
+    fee_scalar = 1 - fee
 
     try:
         ticker_ask = ticker['ask']
@@ -80,8 +94,8 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
         return
 
     if log:
-        graph.add_edge(base_currency, quote_currency, weight=-math.log(ticker_bid))
-        graph.add_edge(quote_currency, base_currency, weight=-math.log(1 / ticker_ask))
+        graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid))
+        graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask))
     else:
-        graph.add_edge(base_currency, quote_currency, weight=ticker_bid)
-        graph.add_edge(quote_currency, base_currency, weight=1 / ticker_ask)
+        graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid)
+        graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask)

@@ -20,7 +20,7 @@ def trade_from_source(exchange, source, amount):
     :param amount: Starting amount of source that will be traded.
     """
     loop = asyncio.get_event_loop()
-    graph = loop.run_until_complete(load_exchange_graph(exchange, False))
+    graph = loop.run_until_complete(load_exchange_graph(exchange, name=False, fees=True))
 
     paths = NegativeWeightFinder(graph).bellman_ford(source, loop_from_source=True)
     for path in paths:
