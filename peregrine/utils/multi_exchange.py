@@ -2,6 +2,7 @@ import asyncio
 import math
 import networkx as nx
 from ccxt import async as ccxt
+import warnings
 
 
 def create_multi_exchange_graph(exchanges: list, digraph=False):
@@ -38,43 +39,72 @@ def create_multi_exchange_graph(exchanges: list, digraph=False):
     return graph
 
 
-def create_weighted_multi_exchange_digraph(exchanges: list, log=False):
+def create_weighted_multi_exchange_digraph(exchanges: list, name=True, log=False, fees=False, suppress=None):
     """
-    Not optimized
+    Not optimized (in favor of readability). There is multiple iterations over exchanges.
     """
-    for i in range(len(exchanges)):
-        exchanges[i] = getattr(ccxt, exchanges[i])()
+    if suppress is None:
+        suppress = ['markets']
+
+    if name:
+        exchanges = [{'object': getattr(ccxt, exchange)()} for exchange in exchanges]
+    else:
+        exchanges = [{'object': exchange} for exchange in exchanges]
 
     loop = asyncio.get_event_loop()
-    futures = [asyncio.ensure_future(exchange.load_markets()) for exchange in exchanges]
+    futures = [asyncio.ensure_future(exchange_dict['object'].load_markets()) for exchange_dict in exchanges]
     loop.run_until_complete(asyncio.gather(*futures))
 
+    if fees:
+        for exchange_dict in exchanges:
+            if 'maker' in exchange_dict['object'].fees['trading']:
+                # we always take the maker side because arbitrage depends on filling orders
+                exchange_dict['fee'] = exchange_dict['object'].fees['trading']['maker']
+            else:
+                if 'fees' not in suppress:
+                    warnings.warn("The fees for {} have not yet been implemented into the library. "
+                                  "Values will be calculated using a 0.2% maker fee.".format(exchange_dict['object'].id))
+                exchange_dict['fee'] = 0.002
+    else:
+        # todo: is there a way to do this with list/ dict comprehension?
+        for exchange_dict in exchanges:
+            exchange_dict['fee'] = 0
+
     graph = nx.MultiDiGraph()
-    futures = [_add_exchange_to_multi_digraph(graph, exchange, log=log) for exchange in exchanges]
+    futures = [_add_exchange_to_multi_digraph(graph, exchange, log=log, suppress=suppress) for exchange in exchanges]
     loop.run_until_complete(asyncio.gather(*futures))
     return graph
 
 
-async def _add_exchange_to_multi_digraph(graph: nx.MultiDiGraph, exchange: ccxt.Exchange, log=True):
-    tasks = [_add_market_to_multi_digraph(exchange, symbol, graph, log=log) for symbol in exchange.symbols]
+async def _add_exchange_to_multi_digraph(graph: nx.MultiDiGraph, exchange, log=True, suppress=None):
+    tasks = [_add_market_to_multi_digraph(exchange, symbol, graph, log=log, suppress=suppress)
+             for symbol in exchange['object'].symbols]
     await asyncio.wait(tasks)
 
 
-# todo: refactor. there is a lot of code repetition here with single_exchange.py's _add_market_to_multi_digraph
+# todo: refactor. there is a lot of code repetition here with single_exchange.py's _add_weighted_edge_to_graph
 # todo: write tests which prove market_name is always a ticker on exchange and exchange's load_markets has been called.
 # this will validate that all exceptions thrown by await exchange.fetch_ticker(market_name) are solely because of
 # ccxt's fetch_ticker
-async def _add_market_to_multi_digraph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True):
+async def _add_market_to_multi_digraph(exchange, market_name: str, graph: nx.DiGraph, log=True, suppress=None):
+    if suppress is None:
+        raise ValueError("suppress cannot be None. Must be a list with possible values listed in docstring of"
+                         "create_weighted_multi_exchange_digraph. If this error shows, something likely went awry "
+                         "during execution.")
+
     try:
-        ticker = await exchange.fetch_ticker(market_name)
+        ticker = await exchange['object'].fetch_ticker(market_name)
     # any error is solely because of fetch_ticker
     except:
+        if 'markets' not in suppress:
+            warning = 'Market {} is unavailable at this time.'.format(market_name)
+            warnings.warn(warning)
         return
 
     try:
         ticker_ask = ticker['ask']
         ticker_bid = ticker['bid']
-    # ask and bid == None if this market is non existent.
+    # ask and bid == None if this market does not exist.
     except TypeError:
         return
 
@@ -87,26 +117,28 @@ async def _add_market_to_multi_digraph(exchange: ccxt.Exchange, market_name: str
     except ValueError:
         return
 
+    fee_scalar = 1 - exchange['fee']
+
     if log:
         graph.add_edge(base_currency, quote_currency,
                        market_name=market_name,
-                       exchange_name=exchange.id,
-                       weight=-math.log(ticker_bid))
+                       exchange_name=exchange['object'].id,
+                       weight=-math.log(fee_scalar * ticker_bid))
 
         graph.add_edge(quote_currency, base_currency,
                        market_name=market_name,
-                       exchange_name=exchange.id,
-                       weight=-math.log(1 / ticker_ask))
+                       exchange_name=exchange['object'].id,
+                       weight=-math.log(fee_scalar * 1 / ticker_ask))
     else:
         graph.add_edge(base_currency, quote_currency,
                        market_name=market_name,
-                       exchange_name=exchange.id,
-                       weight=ticker_bid)
+                       exchange_name=exchange['object'].id,
+                       weight=fee_scalar * ticker_bid)
 
         graph.add_edge(quote_currency, base_currency,
                        market_name=market_name,
-                       exchange_name=exchange.id,
-                       weight=1 / ticker_ask)
+                       exchange_name=exchange['object'].id,
+                       weight=fee_scalar * 1 / ticker_ask)
 
 
 def multi_graph_to_log_graph(digraph: nx.MultiDiGraph):

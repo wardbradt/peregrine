@@ -35,7 +35,6 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None) ->
 
     await exchange.load_markets()
 
-    fee = 0
     if fees:
         if 'maker' in exchange.fees['trading']:
             # we always take the maker side because arbitrage depends on filling orders
@@ -45,6 +44,8 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None) ->
                 warnings.warn("The fees for {} have not yet been implemented into the library. "
                               "Values will be calculated using a 0.2% maker fee.".format(exchange))
             fee = 0.002
+    else:
+        fee = 0
 
     graph = nx.DiGraph()
 
@@ -84,8 +85,6 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
 
 async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True, fee=0,
                                       suppress=None):
-    if suppress is None:
-        suppress = ['markets']
     try:
         ticker = await exchange.fetch_ticker(market_name)
     # any error is solely because of fetch_ticker
