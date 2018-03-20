@@ -1,5 +1,5 @@
 import networkx as nx
-from .bellmannx import NegativeWeightFinder
+from .bellmannx import NegativeWeightFinder, SeenNodeError
 from utils import get_least_edge_in_bunch
 
 
@@ -25,11 +25,14 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
             # edge[1] connects to a negative cycle?
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 # print("data: {} {} {}".format(edge[0], edge[1], str(edge)))
-                yield self._retrace_negative_loop(edge[1],
-                                                  loop_from_source=loop_from_source,
-                                                  source=source,
-                                                  ensure_profit=ensure_profit,
-                                                  unique_paths=unique_paths)
+                try:
+                    yield self._retrace_negative_loop(edge[1],
+                                                      loop_from_source=loop_from_source,
+                                                      source=source,
+                                                      ensure_profit=ensure_profit,
+                                                      unique_paths=unique_paths)
+                except SeenNodeError:
+                    continue
 
     def _first_iteration(self):
         """
