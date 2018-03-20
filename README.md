@@ -112,3 +112,9 @@ USD to ETH at 0.0017965900720432618 = 104.21100149317708 on kraken for ETH/USD
 * Related to the above, implement feature to find maximally profitable arbitrage opportunity.
 * Implement `amount` parameter in bellman_ford to find cycles using at maximum the given amount.
 * Research each exchange's fees and hard-code them (optionally into ccxt's Exchange objects) to account for fees when searching for opportunities.
+
+## Tips
+If you have benefitted from Peregrine and would like to show your appreciation, feel free to send funds to any of the following addresses:
+```
+ETH 0x75B00bA659a6BF735Cf039eE1B04b84fa7a84A83
+```
