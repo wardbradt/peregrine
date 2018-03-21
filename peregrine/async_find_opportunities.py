@@ -20,8 +20,8 @@ class OpportunityFinder:
 
         self.exchange_list = exchanges
         self.market_name = market_name
-        self.highest_bid = {'exchange': None, 'amount': -1}
-        self.lowest_ask = {'exchange': None, 'amount': 9999999}
+        self.highest_bid = {'exchange': None, 'price': -1}
+        self.lowest_ask = {'exchange': None, 'price': 9999999}
 
     async def _test_bid_and_ask(self, exchange):
         """
@@ -43,11 +43,11 @@ class OpportunityFinder:
         except TypeError:
             return
 
-        if self.highest_bid['amount'] < bid:
-            self.highest_bid['amount'] = bid
+        if self.highest_bid['price'] < bid:
+            self.highest_bid['price'] = bid
             self.highest_bid['exchange'] = exchange
-        if ask < self.lowest_ask['amount']:
-            self.lowest_ask['amount'] = ask
+        if ask < self.lowest_ask['price']:
+            self.lowest_ask['price'] = ask
             self.lowest_ask['exchange'] = exchange
 
     def find_min_max(self):

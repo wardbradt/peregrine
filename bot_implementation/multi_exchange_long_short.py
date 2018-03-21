@@ -18,12 +18,34 @@ async def trade(exchanges: list, market_name, amount):
     opportunity = get_opportunity_for_market(market_name, exchanges=exchanges, name=False)
     loop = asyncio.get_event_loop()
 
-    scalar = opportunity['lowest_ask']['amount'] / opportunity['highest_bid']['amount']
+    scalar = opportunity['lowest_ask']['price'] / opportunity['highest_bid']['price']
 
     futures = [opportunity['lowest_ask']['exchange'].create_order(market_name, 'limit',
-                                                                  'buy', amount, opportunity['lowest_ask']['amount']),
+                                                                  'buy', amount, opportunity['lowest_ask']['price']),
                opportunity['highest_bid']['exchange'].create_order(market_name, 'limit',
                                                                    'sell', amount * scalar,
-                                                                   opportunity['highest_bid']['amount'],
+                                                                   opportunity['highest_bid']['price'],
                                                                    {'type': 'market'})]
+    loop.run_until_complete(asyncio.gather(*futures))
+
+
+async def cover_positions(market_name, exchange_bought, amount_bought, exchange_sold, amount_sold, price, *args):
+    """
+    To be called when the user would like to exit the trade (ideally when the prices on exchange_bought and
+    exchange_sold have converged).
+    :param price: The rate of market_name on exchange_bought.
+    :param args: Only one optional positional argument is allowed. It should be the rate of market_name on
+    exchange_sold. If no optional positional arguments are given, the rate of market_name on exchange_sold is assumed
+    to be price.
+    """
+    args = list(args)
+    if len(args) > 0 and len(args) > 1:
+        raise ValueError("Too many arguments given.")
+    # if len(args) == 0:
+    else:
+        args[0] = price
+
+    futures = [exchange_bought.create_order(market_name, 'limit', 'sell', amount_bought, price),
+               exchange_sold.create_order(market_name, 'limit', 'buy', amount_sold, args[0], {'type': 'market'})]
+
     loop.run_until_complete(asyncio.gather(*futures))
