@@ -9,7 +9,8 @@ async def trade(exchanges: list, market_name, amount):
     market neutrality and profit when (or if) the similar markets converge.
     todo: implement program to cover short and sell the long upon convergence.
 
-    :param exchanges: A list of ccxt exchange objects. Each of these exchanges must allow margin trading.
+    :param exchanges: A list of ccxt exchange objects. They must be preloaded with the necessary data to allow trading
+    (e.g. API keys). Each exchange must allow margin trading.
     :param market_name: A market that is common amongst these exchanges. You can find the exchanges for each market
     at peregrine/collections/collections.json
     :param amount: The amount of quote currency in market_name you would like to trade.
