@@ -2,6 +2,7 @@ import json
 import math
 import networkx as nx
 from ccxt import async as ccxt
+import os
 
 
 class ExchangeNotInCollectionsError(Exception):
@@ -20,13 +21,14 @@ def get_exchanges_for_market(market_ticker):
     """
     Returns the list of exchanges on which a market is traded
     """
-    with open('collections/collections.json') as f:
+    # todo: fix paths to collections
+    with open('./../peregrine/collections/collections.json') as f:
         collections = json.load(f)
     for market_name, exchanges in collections.items():
         if market_name == market_ticker:
             return exchanges
 
-    with open('collections/singularly_available_markets.json') as f:
+    with open('./../peregrine//collections/singularly_available_markets.json') as f:
         singularly_available_markets = json.load(f)
     for market_name, exchange in singularly_available_markets:
         if market_name == market_ticker:

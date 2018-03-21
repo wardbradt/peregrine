@@ -1,6 +1,5 @@
 import asyncio
-from peregrine import load_exchange_graph
-from bellmannx import NegativeWeightFinder
+from peregrine import load_exchange_graph, bellman_ford
 import math
 
 
@@ -13,7 +12,9 @@ def trade_from_source(exchange, source, amount):
     biggest issue.
     3. It is not maximally profitable as it iterates through each negative cycle (arbitrage opportunity) only once.
 
-    This is a bare-bones proof-of-concept: it shows how the algorithm could be used for financial gain. However
+    This is a bare-bones proof-of-concept: it shows how the algorithm could be used for financial gain.
+
+    todo: implement an asynchronous version for exchanges which allow margin trading.
 
     :param exchange: A ccxt Exchange object. Should be "pre-loaded" with all necessary data (such as the API key).
     :param source: The ticker for any currency in exchange.
@@ -22,7 +23,7 @@ def trade_from_source(exchange, source, amount):
     loop = asyncio.get_event_loop()
     graph = loop.run_until_complete(load_exchange_graph(exchange, name=False, fees=True))
 
-    paths = NegativeWeightFinder(graph).bellman_ford(source, loop_from_source=True)
+    paths = bellman_ford(graph, source, loop_from_source=True, unique_paths=True)
     for path in paths:
         for i in range(len(path) - 1):
             loop.run_until_complete(exchange.create_order(
