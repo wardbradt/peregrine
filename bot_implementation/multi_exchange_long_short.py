@@ -15,18 +15,16 @@ async def trade(exchanges: list, market_name, amount):
     at peregrine/collections/collections.json
     :param amount: The amount of quote currency in market_name you would like to trade.
     """
-    opportunity = get_opportunity_for_market(market_name, exchanges=exchanges, name=False)
-    loop = asyncio.get_event_loop()
+    opportunity = await get_opportunity_for_market(market_name, exchanges=exchanges, name=False)
 
     scalar = opportunity['lowest_ask']['price'] / opportunity['highest_bid']['price']
 
-    futures = [opportunity['lowest_ask']['exchange'].create_order(market_name, 'limit',
-                                                                  'buy', amount, opportunity['lowest_ask']['price']),
-               opportunity['highest_bid']['exchange'].create_order(market_name, 'limit',
-                                                                   'sell', amount * scalar,
-                                                                   opportunity['highest_bid']['price'],
-                                                                   {'type': 'market'})]
-    loop.run_until_complete(asyncio.gather(*futures))
+    await opportunity['lowest_ask']['exchange'].create_order(market_name, 'limit', 'buy', amount,
+                                                             opportunity['lowest_ask']['price'])
+    await opportunity['highest_bid']['exchange'].create_order(market_name, 'limit',
+                                                              'sell', amount * scalar,
+                                                              opportunity['highest_bid']['price'],
+                                                              {'type': 'market'})
 
 
 async def cover_positions(market_name, exchange_bought, amount_bought, exchange_sold, amount_sold, price, *args):
@@ -45,7 +43,5 @@ async def cover_positions(market_name, exchange_bought, amount_bought, exchange_
     else:
         args[0] = price
 
-    futures = [exchange_bought.create_order(market_name, 'limit', 'sell', amount_bought, price),
-               exchange_sold.create_order(market_name, 'limit', 'buy', amount_sold, args[0], {'type': 'market'})]
-
-    loop.run_until_complete(asyncio.gather(*futures))
+    await exchange_bought.create_order(market_name, 'limit', 'sell', amount_bought, price)
+    await exchange_sold.create_order(market_name, 'limit', 'buy', amount_sold, args[0], {'type': 'market'})
