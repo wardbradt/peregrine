@@ -165,8 +165,6 @@ class NegativeWeightFinder:
                         if next_to_each_other(arbitrage_loop, next_node, arbitrage_loop[0]):
                             self.predecessor_to[arbitrage_loop[0]].pop()
                             # this prevents an error where every edge from a node has been traversed over.
-                            # todo: how could we (efficiently) find the last closed loop? it would be best to pop from
-                            # its predecessors.
                             _pop_arbitrage_loop(arbitrage_loop, self.predecessor_to)
 
                             next_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]

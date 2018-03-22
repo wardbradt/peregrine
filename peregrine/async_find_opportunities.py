@@ -50,15 +50,13 @@ class OpportunityFinder:
             self.lowest_ask['price'] = ask
             self.lowest_ask['exchange'] = exchange
 
-    def find_min_max(self):
-        futures = [asyncio.ensure_future(self._test_bid_and_ask(exchange_name)) for exchange_name in
-                   self.exchange_list]
-        asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
+    async def find_min_max(self):
+        [await self._test_bid_and_ask(exchange_name) for exchange_name in self.exchange_list]
 
         return {'highest_bid': self.highest_bid,
                 'lowest_ask': self.lowest_ask}
 
 
-def get_opportunity_for_market(ticker, exchanges=None, name=True):
+async def get_opportunity_for_market(ticker, exchanges=None, name=True):
     finder = OpportunityFinder(ticker, exchanges=exchanges, name=name)
-    return finder.find_min_max()
+    return await finder.find_min_max()
