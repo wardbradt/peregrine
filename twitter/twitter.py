@@ -6,10 +6,8 @@ import heapq
 # A bot which tweets out the top 3 price disparities from a given set of markets and exchanges.
 
 
-CONSUMER_KEY = 'KcvRmdAYfi626A7jZPZTAQFNR'
-CONSUMER_SECRET = 'Rb3fRsvp0dskgdW47Pb9ZeDvHNjeiAABMy7gXe5g4BgBCfJDt4'
-ACCESS_KEY = '770972975403143170-b41MXpnr3RFDYAaCTi1ie7fI13CJrnk'
-ACCESS_SECRET = 'us5eWbMlT2mNEGMoUbUclrfcecqGXb88B5Uyu1AqbjWJo'
+CONSUMER_KEY = '****'
+ACCESS_KEY = '****'
 auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
 api = tweepy.API(auth)
