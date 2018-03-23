@@ -24,7 +24,6 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
             # todo: does this indicate that there is a negative cycle beginning and ending with edge[1]? or just that
             # edge[1] connects to a negative cycle?
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                # print("data: {} {} {}".format(edge[0], edge[1], str(edge)))
                 try:
                     yield self._retrace_negative_loop(edge[1],
                                                       loop_from_source=loop_from_source,

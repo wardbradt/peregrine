@@ -34,6 +34,7 @@ class OpportunityFinder:
 
         try:
             ticker = await exchange.fetch_ticker(self.market_name)
+            await exchange.close()
         except ccxt.BaseError:
             return
         try:

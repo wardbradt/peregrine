@@ -151,6 +151,7 @@ BCH to ETH at 1.8874401 = 118.18480885571941 on bittrex for BCH/ETH
 * Package for pip
 * Write better/ more examples and unit tests
 * Implement rotation of `arbitrage_loop` when the source node is in the found path and `loop_from_source=True` in `retrace_negative_loop` in bellmannx.py.
+* Fix frequent `Unclosed connector` ccxt error (look at [this issue](https://github.com/ccxt/ccxt/issues/2092))
 ## Potential Enhancements
 
 * Create (better) data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)

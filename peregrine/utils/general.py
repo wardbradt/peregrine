@@ -2,7 +2,6 @@ import json
 import math
 import networkx as nx
 from ccxt import async as ccxt
-import os
 
 
 class ExchangeNotInCollectionsError(Exception):
@@ -37,7 +36,7 @@ def get_exchanges_for_market(market_ticker):
     raise ExchangeNotInCollectionsError(market_ticker)
 
 
-def print_profit_opportunity_for_path(graph, path):
+def print_profit_opportunity_for_path(graph, path, round_to=None):
     if not path:
         return
 
@@ -51,11 +50,16 @@ def print_profit_opportunity_for_path(graph, path):
             # todo: rate should not have to be inversed
             rate = math.exp(-graph[start][end]['weight'])
             money *= rate
-            print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
-                                                                    "money": money})
+            if round_to is None:
+                print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
+                                                                        "money": money})
+            else:
+                print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end,
+                                                                        "rate": round(rate, round_to),
+                                                                        "money": round(money, round_to)})
 
 
-def print_profit_opportunity_for_path_multi(graph: nx.Graph, path):
+def print_profit_opportunity_for_path_multi(graph: nx.Graph, path, print_output=True, round_to=None, shorten=False):
     """
     The only difference between this function and the function in utils/general.py is that the print statement
     specifies the exchange name. It assumes all edges in graph and in path have exchange_name and market_name
@@ -65,7 +69,8 @@ def print_profit_opportunity_for_path_multi(graph: nx.Graph, path):
         return
 
     money = 100
-    print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
+    result = ''
+    result += "Starting with %(money)i in %(currency)s\n" % {"money": money, "currency": path[0]}
 
     for i in range(len(path)):
         if i + 1 < len(path):
@@ -73,6 +78,15 @@ def print_profit_opportunity_for_path_multi(graph: nx.Graph, path):
             end = path[i + 1]
             rate = math.exp(-graph[start][end]['weight'])
             money *= rate
-            print("{} to {} at {} = {} on {} for {}".format(start, end, rate, money,
-                                                            graph[start][end]['exchange_name'],
-                                                            graph[start][end]['market_name']))
+            if round_to is None:
+                result += "{} to {} at {} = {}".format(start, end, rate, money)
+            else:
+                result += "{} to {} at {} = {}".format(start, end, round(rate, round_to), round(money, round_to))
+            if not shorten:
+                result += " on {} for {}".format(graph[start][end]['exchange_name'], graph[start][end]['market_name'])
+
+            result += '\n'
+
+    if print_output:
+        print(result)
+    return result

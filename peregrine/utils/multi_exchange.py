@@ -80,6 +80,7 @@ async def _add_exchange_to_multi_digraph(graph: nx.MultiDiGraph, exchange, log=T
     tasks = [_add_market_to_multi_digraph(exchange, symbol, graph, log=log, suppress=suppress)
              for symbol in exchange['object'].symbols]
     await asyncio.wait(tasks)
+    await exchange['object'].close()
 
 
 # todo: refactor. there is a lot of code repetition here with single_exchange.py's _add_weighted_edge_to_graph
