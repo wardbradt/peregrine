@@ -32,7 +32,9 @@ class NegativeWeightFinder:
 
     def bellman_ford(self, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
         """
-        :param unique_paths:
+        Note: the loop_from_source parameter, when set to True, currently outputs a less than ideal path from source
+        to the beginning of the arbitrage opportunity.
+        
         :param ensure_profit: if true, ensures that the weight of the returned path is greater able to be arbitraged
         for a profit. if false, the resultant path may not be profitable because although it contains a negative cycle
         (arbitrage-able loop), the weight of the paths to and from that cycle are more positive than the absolute value
