@@ -4,7 +4,7 @@ A Python library which provides several algorithms to detect arbitrage opportuni
 
 ## Installation
 1. Ensure you have [installed pip](https://pip.pypa.io/en/stable/installing/).
-2. Run the following line in your favorite command line:
+2. Run the following in your command line:
 ```
 pip install peregrinearb
 ```
