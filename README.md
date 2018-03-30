@@ -1,6 +1,6 @@
 # Peregrine
 
-A Python library which provides several algorithms to detect arbitrage opportunities across over 90 cryptocurrency markets in 34 countries.
+A Python library which provides several algorithms to detect arbitrage opportunities across over 90 cryptocurrency markets in 34 countries
 
 ## Finding Arbitrage Opportunities: Example Usage
 
@@ -9,7 +9,7 @@ This section provides a brief overview of Peregrine's functionality. Examples de
 ### Multiples Exchange/ One Currency
 
 ```python
-from peregrine import get_opportunity_for_market
+from peregrinearb import get_opportunity_for_market
 import asyncio
 opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD"))
 print(opportunity)
@@ -25,7 +25,7 @@ At the time of writing, this prints the following in less than one second.
 If you want to specify which exchanges to find opportunities on:
 
 ```python
-from peregrine import get_opportunity_for_market
+from peregrinearb import get_opportunity_for_market
 import asyncio
 
 opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD", exchange_list=["anxpro", "bitbay", "coinfloor", "gemini", "livecoin"]))
@@ -35,7 +35,7 @@ print(opportunity)
 If you want to find opportunities on the exchanges of only a certain country<sup>1</sup>, you can do it like so:
 
 ```python
-from peregrine import build_specific_collections, get_opportunity_for_market
+from peregrinearb import build_specific_collections, get_opportunity_for_market
 
 us_eth_btc_exchanges = build_specific_collections({'countries': 'US' })
 opportunity = get_opportunity_for_market("ETH/BTC", us_eth_btc_exchanges["ETH/BTC"])
@@ -48,7 +48,7 @@ print(opportunity)
 
 ```python
 import asyncio
-from peregrine import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
+from peregrinearb import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
 graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph('binance'))
 
 paths = bellman_ford(graph, 'BTC')
@@ -69,7 +69,7 @@ XLM to BTC at 0.000026 = 100.208724
 If you would like to account for transaction fees, set `fees=True` when calling `load_exchange_graph`.
 ```python
 import asyncio
-from peregrine import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
+from peregrinearb import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
 
 
 loop = asyncio.get_event_loop()
@@ -83,7 +83,7 @@ for path in paths:
 ### Multiple Exchanges/ Multiple Currencies
 
 ```python
-from peregrine import create_weighted_multi_exchange_digraph, bellman_ford_multi, print_profit_opportunity_for_path_multi
+from peregrinearb import create_weighted_multi_exchange_digraph, bellman_ford_multi, print_profit_opportunity_for_path_multi
 
 
 graph = create_weighted_multi_exchange_digraph(['kraken', 'bittrex', 'gemini'], log=True)
@@ -112,7 +112,7 @@ USD to ETH at 0.0017965900720432618 = 104.21100149317708 on kraken for ETH/USD
 Should you like to account for transaction fees. In the example above, simply set `fees` to `True` when calling `create_weighted_multi_exchange_digraph`.
 For example, the following code prints out all of the opportunities found on the given exchanges while accounting for fees:
 ```python
-from peregrine import create_weighted_multi_exchange_digraph, bellman_ford_multi, print_profit_opportunity_for_path_multi
+from peregrinearb import create_weighted_multi_exchange_digraph, bellman_ford_multi, print_profit_opportunity_for_path_multi
 
 
 graph = create_weighted_multi_exchange_digraph(['exmo', 'binance', 'bitmex', 'bittrex', 'gemini', 'kraken'], log=True)

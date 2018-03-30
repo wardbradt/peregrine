@@ -1,5 +1,5 @@
 import asyncio
-from peregrine import load_exchange_graph, bellman_ford
+from peregrinearb import load_exchange_graph, bellman_ford
 import math
 
 

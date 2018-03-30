@@ -1,5 +1,4 @@
-from peregrine import get_opportunity_for_market
-import asyncio
+from peregrinearb import get_opportunity_for_market
 
 
 async def trade(exchanges: list, market_name, amount):
@@ -12,7 +11,7 @@ async def trade(exchanges: list, market_name, amount):
     :param exchanges: A list of ccxt exchange objects. They must be preloaded with the necessary data to allow trading
     (e.g. API keys). Each exchange must allow margin trading.
     :param market_name: A market that is common amongst these exchanges. You can find the exchanges for each market
-    at peregrine/collections/collections.json
+    at peregrinearb/collections/collections.json
     :param amount: The amount of quote currency in market_name you would like to trade.
     """
     opportunity = await get_opportunity_for_market(market_name, exchanges=exchanges, name=False)

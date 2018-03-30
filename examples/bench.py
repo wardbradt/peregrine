@@ -3,8 +3,8 @@ import pyximport
 pyximport.install()
 from cythonperegrine import build_specific_collections as cython_build
 from cythonperegrine import OpportunityFinder as cython_finder
-from peregrine import build_specific_collections as python_build
-from peregrine import OpportunityFinder as python_finder
+from peregrinearb import build_specific_collections as python_build
+from peregrinearb import OpportunityFinder as python_finder
 from examples.calculate_time import calculate_time
 
 

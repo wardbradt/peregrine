@@ -1,6 +1,5 @@
 import ccxt.async as ccxt
-import asyncio
-from peregrine.utils.general import get_exchanges_for_market
+from .utils.general import get_exchanges_for_market
 
 
 class OpportunityFinder:

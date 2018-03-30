@@ -1,5 +1,5 @@
 import tweepy, time
-from peregrine import get_opportunity_for_market, create_weighted_multi_exchange_digraph, bellman_ford_multi, \
+from peregrinearb import get_opportunity_for_market, create_weighted_multi_exchange_digraph, bellman_ford_multi, \
     print_profit_opportunity_for_path_multi
 import asyncio
 import heapq

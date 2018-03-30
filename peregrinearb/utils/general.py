@@ -21,13 +21,13 @@ def get_exchanges_for_market(market_ticker):
     Returns the list of exchanges on which a market is traded
     """
     # todo: fix paths to collections
-    with open('./../peregrine/collections/collections.json') as f:
+    with open('./../peregrinearb/collections/collections.json') as f:
         collections = json.load(f)
     for market_name, exchanges in collections.items():
         if market_name == market_ticker:
             return exchanges
 
-    with open('./../peregrine//collections/singularly_available_markets.json') as f:
+    with open('./../peregrinearb//collections/singularly_available_markets.json') as f:
         singularly_available_markets = json.load(f)
     for market_name, exchange in singularly_available_markets:
         if market_name == market_ticker:

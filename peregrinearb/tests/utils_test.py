@@ -1,5 +1,5 @@
 from unittest import TestCase
-from peregrine import format_graph_for_json
+from peregrinearb import format_graph_for_json
 import networkx as nx
 
 

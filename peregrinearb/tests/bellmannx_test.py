@@ -1,5 +1,5 @@
 from unittest import TestCase
-from peregrine import bellman_ford_multi, multi_digraph_from_json, multi_digraph_from_dict, \
+from peregrinearb import bellman_ford_multi, multi_digraph_from_json, multi_digraph_from_dict, \
     calculate_profit_ratio_for_path, bellman_ford
 import json
 import networkx as nx

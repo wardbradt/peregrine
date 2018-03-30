@@ -1,4 +1,4 @@
-from peregrine import create_weighted_multi_exchange_digraph, bellman_ford_multi, calculate_profit_ratio_for_path, \
+from peregrinearb import create_weighted_multi_exchange_digraph, bellman_ford_multi, calculate_profit_ratio_for_path, \
     print_profit_opportunity_for_path_multi
 
 

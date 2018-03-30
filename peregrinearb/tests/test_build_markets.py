@@ -1,5 +1,5 @@
 from unittest import TestCase
-from peregrine.async_build_markets import build_all_collections, build_specific_collections, build_collections, \
+from peregrinearb.async_build_markets import build_all_collections, build_specific_collections, build_collections, \
     build_arbitrage_graph_for_exchanges
 import ccxt.async as ccxt
 import asyncio

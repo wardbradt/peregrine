@@ -1,5 +1,5 @@
 import asyncio
-from peregrine import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
+from peregrinearb import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
 
 
 loop = asyncio.get_event_loop()
