@@ -1,6 +1,6 @@
 import networkx as nx
 from .bellmannx import NegativeWeightFinder, SeenNodeError
-from utils import get_least_edge_in_bunch
+from .utils import get_least_edge_in_bunch
 
 
 class NegativeWeightFinderMulti(NegativeWeightFinder):
