@@ -1,6 +1,6 @@
 import math
 import networkx as nx
-from utils import last_index_in_list, PrioritySet, next_to_each_other
+from .utils import last_index_in_list, PrioritySet, next_to_each_other
 
 
 class SeenNodeError(Exception):
