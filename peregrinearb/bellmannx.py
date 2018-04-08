@@ -253,8 +253,8 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
                 self.relax(edge)
 
         for edge in self.graph.edges(data=True):
-            depth = self.depth_nodes_to[edge[0]] if math.exp(-edge[2]['weight']) * edge[2]['depth'] > self.depth_nodes_to[edge[0]] \
-                else edge[2]['depth']
+            depth = edge[2]['depth'] if math.exp(-edge[2]['weight']) * edge[2]['depth'] < self.depth_nodes_to[edge[0]] \
+                else self.depth_nodes_to[edge[0]]
             if self.distance_to[edge[0]] + depth * edge[2]['weight'] < self.distance_to[edge[1]]:
                 try:
                     yield self._retrace_negative_loop(edge[1],
@@ -299,11 +299,14 @@ def bellman_ford(graph, source, loop_from_source=True, ensure_profit=False, uniq
 
 
 def calculate_profit_ratio_for_path(graph, path, depth=False):
-    total = 0
+    ratio = 1
     for i in range(len(path)):
         if i + 1 < len(path):
             start = path[i]
             end = path[i + 1]
-            total += graph[start][end]['weight']
+            if depth:
+                ratio *= math.exp(-graph[start][end]['weight']) * graph[start][end]['depth']
+            else:
+                ratio *= math.exp(-graph[start][end]['weight'])
 
-    return math.exp(-total)
+    return ratio

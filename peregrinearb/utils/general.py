@@ -48,7 +48,10 @@ def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False):
             start = path[i]
             end = path[i + 1]
             # todo: rate should not have to be inversed
-            rate = math.exp(-graph[start][end]['weight'])
+            if depth:
+                rate = math.exp(-graph[start][end]['weight']) * graph[start][end]['depth']
+            else:
+                rate = math.exp(-graph[start][end]['weight'])
             money *= rate
             if round_to is None:
                 print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
