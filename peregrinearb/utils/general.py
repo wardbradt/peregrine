@@ -36,7 +36,7 @@ def get_exchanges_for_market(market_ticker):
     raise ExchangeNotInCollectionsError(market_ticker)
 
 
-def print_profit_opportunity_for_path(graph, path, round_to=None):
+def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False):
     if not path:
         return
 

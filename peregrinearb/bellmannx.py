@@ -253,7 +253,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
                 self.relax(edge)
 
         for edge in self.graph.edges(data=True):
-            depth = self.depth_nodes_to[edge[0]] if edge[2]['weight'] * edge[2]['depth'] > self.depth_nodes_to[edge[0]] \
+            depth = self.depth_nodes_to[edge[0]] if math.exp(-edge[2]['weight']) * edge[2]['depth'] > self.depth_nodes_to[edge[0]] \
                 else edge[2]['depth']
             if self.distance_to[edge[0]] + depth * edge[2]['weight'] < self.distance_to[edge[1]]:
                 try:
@@ -267,7 +267,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
 
     def relax(self, edge):
         # edge[1] is the head node of the edge, edge[0] is the tail node.
-        depth = edge[2]['depth'] if edge[2]['weight'] * edge[2]['depth'] < self.depth_nodes_to[edge[0]] \
+        depth = edge[2]['depth'] if math.exp(-edge[2]['weight']) * edge[2]['depth'] < self.depth_nodes_to[edge[0]] \
             else self.depth_nodes_to[edge[0]]
         # if the least distance from edge[0] to source (accounting for market depths) + the weight of edge * depth <
         # the least distance to edge[1]
