@@ -230,6 +230,9 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
 
     def bellman_ford(self, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
         """
+        # todo: fix depths
+        This is currently bugged as it outputs paths that do not have negative weights when accounting for market depth.
+
         Note: the loop_from_source parameter, when set to True, currently outputs a less than ideal path from source
         to the beginning of the arbitrage opportunity.
         :param unique_paths: If true, ensures that no duplicate paths are returned.
