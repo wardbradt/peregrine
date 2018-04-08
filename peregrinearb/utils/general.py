@@ -36,12 +36,12 @@ def get_exchanges_for_market(market_ticker):
     raise ExchangeNotInCollectionsError(market_ticker)
 
 
-def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False):
+def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, starting_amount=100):
     if not path:
         return
 
-    money = 100
-    print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
+    starting_amount = 100
+    print("Starting with {} in {}".format(starting_amount, path[0]))
 
     for i in range(len(path)):
         if i + 1 < len(path):
@@ -49,17 +49,16 @@ def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False):
             end = path[i + 1]
             # todo: rate should not have to be inversed
             if depth:
-                rate = math.exp(-graph[start][end]['weight']) * graph[start][end]['depth']
+                volume = min(starting_amount, graph[start][end]['depth'])
+                rate = math.exp(-graph[start][end]['weight']) * volume
             else:
                 rate = math.exp(-graph[start][end]['weight'])
-            money *= rate
+            starting_amount *= rate
             if round_to is None:
-                print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
-                                                                        "money": money})
+                print("{} to {} at {} = {}".format(start, end, rate, starting_amount))
             else:
-                print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end,
-                                                                        "rate": round(rate, round_to),
-                                                                        "money": round(money, round_to)})
+                print("{} to {} at {} = {}".format(start, end, round(rate, round_to),
+                                                   round(starting_amount, round_to)))
 
 
 def print_profit_opportunity_for_path_multi(graph: nx.Graph, path, print_output=True, round_to=None, shorten=False):
