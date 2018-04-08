@@ -305,7 +305,9 @@ def calculate_profit_ratio_for_path(graph, path, depth=False):
             start = path[i]
             end = path[i + 1]
             if depth:
-                ratio *= math.exp(-graph[start][end]['weight']) * graph[start][end]['depth']
+                trade_volume = min(ratio, graph[start][end]['depth'])
+                ratio = math.exp(-graph[start][end]['weight']) * trade_volume
+                # ratio *= math.exp(-graph[start][end]['weight']) * graph[start][end]['depth']
             else:
                 ratio *= math.exp(-graph[start][end]['weight'])
 
