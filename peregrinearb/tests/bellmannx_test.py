@@ -90,7 +90,7 @@ class TestBellmannx(TestCase):
             self.assertLess(weight, 0)
 
     def test_depth(self):
-        # currently does not work as bellman_ford is broken.
+        # currently does not work as bellman_ford (of NegativeWeightDepthFinder) is broken.
         for i in range(1, 5):
             G = nx.DiGraph()
             G.add_edge('A', 'B', weight=-0.69, depth=1)
