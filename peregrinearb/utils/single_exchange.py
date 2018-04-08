@@ -24,9 +24,11 @@ def create_exchange_graph(exchange: ccxt.Exchange):
     return graph
 
 
-async def load_exchange_graph(exchange, name=True, fees=False, suppress=None) -> nx.DiGraph:
+async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, depth=False) -> nx.DiGraph:
     """
-    Returns a DiGraph as described in populate_exchange_graph
+    Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
+    edges). If depth, also adds an attribute 'depth' to each edge which represents the current volume of orders
+    available at the price represented by the 'weight' attribute of each edge.
     """
     if suppress is None:
         suppress = ['markets']
@@ -49,7 +51,7 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None) ->
 
     graph = nx.DiGraph()
 
-    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fee=fee, suppress=suppress)
+    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fee=fee, suppress=suppress, depth=depth)
              for market_name in exchange.symbols]
     await asyncio.wait(tasks)
 
@@ -84,9 +86,10 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
 
 
 async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True, fee=0,
-                                      suppress=None):
+                                      suppress=None, depth=False):
     try:
-        ticker = await exchange.fetch_ticker(market_name)
+        order_book = await exchange.fetch_order_book(market_name)
+        # ticker = await exchange.fetch_ticker(market_name)
     # any error is solely because of fetch_ticker
     except:
         if 'markets' not in suppress:
@@ -97,8 +100,11 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     fee_scalar = 1 - fee
 
     try:
-        ticker_ask = ticker['ask']
-        ticker_bid = ticker['bid']
+        ticker_bid = order_book['bids'][0][0]
+        ticker_ask = order_book['asks'][0][0]
+        if depth:
+            bid_volume = order_book['bids'][0][1]
+            ask_volume = order_book['asks'][0][1]
     # ask and bid == None if this market is non existent.
     except TypeError:
         return
@@ -113,8 +119,18 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
         return
 
     if log:
-        graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid))
-        graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask))
+        if depth:
+            graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
+                           depth=bid_volume)
+            graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
+                           depth=ask_volume)
+        else:
+            graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid))
+            graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask))
     else:
-        graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid)
-        graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask)
+        if depth:
+            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid, depth=bid_volume)
+            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask, depth=ask_volume)
+        else:
+            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid)
+            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask)
