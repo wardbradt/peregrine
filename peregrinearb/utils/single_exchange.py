@@ -55,7 +55,7 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None) ->
         tickers = {exchange: None for exchange in ccxt.exchanges}
 
     tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph,
-                                         log=True, fee=fee, ticker=ticker)
+                                         log=True, fee=fee, suppress=suppress, ticker=ticker)
              for market_name, ticker in tickers.items()]
 
     await asyncio.wait(tasks)
