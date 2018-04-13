@@ -1,5 +1,5 @@
 # This code is modified from examples/test_build_collections.py
-from peregrine.async_build_markets import build_specific_collections
+from peregrinearb.async_build_markets import build_specific_collections
 
 
 # This is a dict of the collections only containing exchanges which have the fetch_order_book, create_market_buy_order,

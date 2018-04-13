@@ -2,7 +2,7 @@ import ccxt.async as ccxt
 import asyncio
 import time
 import numpy as np
-from peregrine.utils import get_exchange_pairs_for_market
+from .utils import get_exchanges_for_market
 
 
 class OutlierDetector:
@@ -29,7 +29,7 @@ class OutlierDetector:
 
 
 def clean_request_timeout_for_market(market_name):
-    return clean_request_timeout_for_exchanges(get_exchange_pairs_for_market(market_name))
+    return clean_request_timeout_for_exchanges(get_exchanges_for_market(market_name))
 
 
 def clean_request_timeout_for_exchanges(exchange_list):
