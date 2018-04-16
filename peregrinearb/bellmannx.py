@@ -220,7 +220,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             # Initialize all distance_to values to infinity and all predecessor_to values to None
             self.distance_to[node] = float('Inf')
             self.predecessor_to[node] = PrioritySet()
-            self.depth_nodes_to[node] = float('Inf')
+            # todo: see if it is more likely for a transaction to be limited by amount present at node or edge depth.
             self.distance_from[node] = float('Inf')
             self.predecessor_from[node] = PrioritySet()
 
@@ -230,22 +230,14 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
 
     def bellman_ford(self, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
         """
-        # todo: fix depths
-        This is currently bugged as it outputs paths that do not have negative weights when accounting for market depth.
+        Currently, this only yields the first negative cycle reachable from source. This is because the
+        conditional in the V-th iteration of bellman ford does not work when the edges limit the depth. I will
+        continue research into refactoring the algorithm to detect all most profitable negative cycles (like
+        NegativeWeightFinder).
 
-        Note: the loop_from_source parameter, when set to True, currently outputs a less than ideal path from source
-        to the beginning of the arbitrage opportunity.
-        :param unique_paths: If true, ensures that no duplicate paths are returned.
-        :param ensure_profit: if true, ensures that the weight of the returned path is greater able to be arbitraged
-        for a profit. if false, the resultant path may not be profitable because although it contains a negative cycle
-        (arbitrage-able loop), the weight of the paths to and from that cycle are more positive than the absolute value
-        of the negative cycle, rendering the path as a whole positive. Still in development, does not currently work.
-        :param loop_from_source: if true, will return the path beginning and ending at source. Note: this may cause the
-        path to be a positive-weight cycle (if traversed straight through). Because a negative cycle exists in the path,
-        (and it can be traversed infinitely many times), the path is negative. This is still in development and is
-        certainly not optimized. It is not an implementation of an algorithm that I know of but one that I have created
-        (without too much weight on the optimization, more so on simply completing it).
-        :param source: The node in graph from which the values in distance_to and distance_from will be calculated.
+        todo: refactor so it accounts for edges as the amount x that can be passed through, not the ln(-x) amount.
+
+        Look at the bellman_ford method in NegativeWeightFinder for parameter docstrings.
         """
         self.initialize(source)
         # After len(graph) - 1 passes, algorithm is complete.
@@ -255,28 +247,37 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             for edge in self.graph.edges(data=True):
                 self.relax(edge)
 
-        for edge in self.graph.edges(data=True):
-            depth = edge[2]['depth'] if math.exp(-edge[2]['weight']) * edge[2]['depth'] < self.depth_nodes_to[edge[0]] \
-                else self.depth_nodes_to[edge[0]]
-            if self.distance_to[edge[0]] + depth * edge[2]['weight'] < self.distance_to[edge[1]]:
+        for edge in self.graph.edges(data=True, nbunch=source):
+            if self.distance_to[edge[0]] != self.depth_nodes_to[edge[0]]:
                 try:
-                    yield self._retrace_negative_loop(edge[1],
+                    yield self._retrace_negative_loop(edge[0],
                                                       loop_from_source=loop_from_source,
                                                       source=source,
                                                       ensure_profit=ensure_profit,
                                                       unique_paths=unique_paths)
                 except SeenNodeError:
-                    continue
+                    pass
+
+        # for edge in self.graph.edges(data=True):
+        #     depth = min(math.exp(-self.distance_to[edge[0]]), edge[2]['depth'])
+        #     if edge[2]['weight'] - math.log(depth) < self.distance_to[edge[1]]:
+        #         try:
+        #             yield self._retrace_negative_loop(edge[1],
+        #                                               loop_from_source=loop_from_source,
+        #                                               source=source,
+        #                                               ensure_profit=ensure_profit,
+        #                                               unique_paths=unique_paths)
+        #         except SeenNodeError:
+        #             pass
 
     def relax(self, edge):
         # edge[1] is the head node of the edge, edge[0] is the tail node.
-        depth = edge[2]['depth'] if math.exp(-edge[2]['weight']) * edge[2]['depth'] < self.depth_nodes_to[edge[0]] \
-            else self.depth_nodes_to[edge[0]]
+        depth = min(math.exp(-self.distance_to[edge[0]]), edge[2]['depth'])
         # if the least distance from edge[0] to source (accounting for market depths) + the weight of edge * depth <
         # the least distance to edge[1]
-        if self.distance_to[edge[0]] + edge[2]['weight'] * depth < self.distance_to[edge[1]]:
-            self.distance_to[edge[1]] = edge[2]['weight'] * depth + self.distance_to[edge[0]]
-            self.depth_nodes_to[edge[1]] = depth
+        if edge[2]['weight'] - math.log(depth) < self.distance_to[edge[1]]:
+            self.distance_to[edge[1]] = edge[2]['weight'] - math.log(depth)
+            self.depth_nodes_to[edge[0]] = self.distance_to[edge[0]]
 
         # todo: there must be a more efficient way to order neighbors by preceding path weights
         # no matter what, adds this edge to the PrioritySet in distance_to
