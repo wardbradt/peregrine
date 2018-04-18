@@ -70,7 +70,7 @@ class NegativeWeightFinder:
             self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
 
         # todo: there must be a more efficient way to order neighbors by preceding path weights
-        # no matter what, adds this edge to the PrioritySet in distance_to
+        # no matter what, adds this edge to the PrioritySet in predecessor_to
         self.predecessor_to[edge[1]].add(edge[0], self.distance_to[edge[0]] + edge[2]['weight'])
 
         if self.distance_from[edge[1]] + edge[2]['weight'] < self.distance_from[edge[0]]:

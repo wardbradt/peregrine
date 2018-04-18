@@ -96,7 +96,7 @@ class TestBellmannx(TestCase):
             G.add_edge('A', 'B', weight=-0.69, depth=1)
             G.add_edge('B', 'C', weight=-1.1, depth=1)
             G.add_edge('C', 'A', weight=1.39, depth=i)
-            paths = bellman_ford(G, 'A', unique_paths=True, depth=True)
+            paths = bellman_ford(G, 'A', unique_paths=True, depth=True, loop_from_source=False)
             total = 0
             for path in paths:
                 total += 1
@@ -118,3 +118,11 @@ class TestBellmannx(TestCase):
         #     # this is not the case with the normal call to bellman_ford, so figure out why this is different.
         #     self.assertEquals(1.5, calculate_profit_ratio_for_path(G, path))
 
+    def test_ratio(self):
+        G = nx.DiGraph()
+        G.add_edge('A', 'B', weight=-0.69)
+        G.add_edge('B', 'C', weight=-1.1)
+        G.add_edge('C', 'A', weight=1.39)
+        paths = bellman_ford(G, 'A', unique_paths=True, loop_from_source=False)
+        for path in paths:
+            self.assertEquals(calculate_profit_ratio_for_path(G, path), 1.5)
