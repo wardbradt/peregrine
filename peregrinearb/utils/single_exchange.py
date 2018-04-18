@@ -51,8 +51,15 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
 
     graph = nx.DiGraph()
 
-    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fee=fee, suppress=suppress, depth=depth)
-             for market_name in exchange.symbols]
+    try:
+        tickers = await exchange.fetch_tickers()
+    except ccxt.errors.NotSupported:
+        tickers = {exchange: None for exchange in ccxt.exchanges}
+
+    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph,
+                                         log=True, fee=fee, suppress=suppress, ticker=ticker)
+             for market_name, ticker in tickers.items()]
+
     await asyncio.wait(tasks)
 
     return graph
@@ -85,17 +92,22 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
     return result
 
 
-async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True, fee=0,
-                                      suppress=None, depth=False):
-    try:
-        order_book = await exchange.fetch_order_book(market_name)
-        # ticker = await exchange.fetch_ticker(market_name)
-    # any error is solely because of fetch_ticker
-    except:
-        if 'markets' not in suppress:
-            warning = 'Market {} is unavailable at this time.'.format(market_name)
-            warnings.warn(warning)
-        return
+async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange,
+                                      market_name: str,
+                                      graph: nx.DiGraph,
+                                      log=True,
+                                      fee=0,
+                                      suppress=None,
+                                      ticker=None):
+    if ticker is None:
+        try:
+            ticker = await exchange.fetch_ticker(market_name)
+        # any error is solely because of fetch_ticker
+        except:
+            if 'markets' not in suppress:
+                warning = 'Market {} is unavailable at this time.'.format(market_name)
+                warnings.warn(warning)
+            return
 
     fee_scalar = 1 - fee
 
