@@ -229,36 +229,6 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         self.distance_to[source] = 0
         self.distance_from[source] = 0
 
-    def bellman_ford(self, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
-        """
-        Currently, this only yields the first negative cycle reachable from source. This is because the
-        conditional in the V-th iteration of bellman ford does not work when the edges limit the depth. I will
-        continue research into refactoring the algorithm to detect all most profitable negative cycles (like
-        NegativeWeightFinder).
-
-        todo: refactor so it accounts for edges as the amount x that can be passed through, not the ln(-x) amount.
-
-        Look at the bellman_ford method in NegativeWeightFinder for parameter docstrings.
-        """
-        self.initialize(source)
-        # After len(graph) - 1 passes, algorithm is complete.
-        for i in range(len(self.graph) - 1):
-            # for each node in the graph, test if the distance to each of its siblings is shorter by going from
-            # source->base_currency + base_currency->quote_currency
-            for edge in self.graph.edges(data=True):
-                self.relax(edge)
-
-        for edge in self.graph.edges(data=True):
-            if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                try:
-                    yield self._retrace_negative_loop(edge[1],
-                                                      loop_from_source=loop_from_source,
-                                                      source=source,
-                                                      ensure_profit=ensure_profit,
-                                                      unique_paths=unique_paths)
-                except SeenNodeError:
-                    continue
-
     def relax(self, edge):
         # edge[1] is the head node of the edge, edge[0] is the tail node.
         depth = max(self.distance_to[edge[0]], edge[2]['depth'])
@@ -268,8 +238,8 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             self.distance_to[edge[1]] = edge[2]['weight'] + depth
 
         # todo: there must be a more efficient way to order neighbors by preceding path weights
-        # no matter what, adds this edge to the PrioritySet in distance_to
-        self.predecessor_to[edge[1]].add(edge[0], self.distance_to[edge[0]] + edge[2]['weight'])
+        # no matter what, adds this edge to the PrioritySet in predecessor_to
+        self.predecessor_to[edge[1]].add(edge[0], edge[2]['weight'] + depth)
 
         if self.distance_from[edge[1]] + edge[2]['weight'] < self.distance_from[edge[0]]:
             self.distance_from[edge[0]] = self.distance_from[edge[1]] + edge[2]['weight']
