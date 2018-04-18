@@ -57,7 +57,7 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
         tickers = {exchange: None for exchange in ccxt.exchanges}
 
     tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph,
-                                         log=True, fee=fee, suppress=suppress, ticker=ticker)
+                                         log=True, fee=fee, suppress=suppress, ticker=ticker, depth=depth)
              for market_name, ticker in tickers.items()]
 
     await asyncio.wait(tasks)
@@ -92,16 +92,16 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
     return result
 
 
-async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange,
-                                      market_name: str,
-                                      graph: nx.DiGraph,
-                                      log=True,
-                                      fee=0,
-                                      suppress=None,
-                                      ticker=None):
+async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True, fee=0,
+                                      suppress=None, ticker=None, depth=False):
+    """
+    Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
+    edges). If depth, also adds an attribute 'depth' to each edge which represents the current volume of orders
+    available at the price represented by the 'weight' attribute of each edge.
+    """
     if ticker is None:
         try:
-            ticker = await exchange.fetch_ticker(market_name)
+            order_book = await exchange.fetch_order_book(market_name)
         # any error is solely because of fetch_ticker
         except:
             if 'markets' not in suppress:
