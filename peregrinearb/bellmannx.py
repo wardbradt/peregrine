@@ -205,9 +205,8 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         """
         The algorithm when accounting for depth is significantly different at every step that it would necessitate
         almost constant conditionals to check if depth would be accounted for. This is why rather than simply make
-        depth a parameter in all of NegativeWeightFinder's methods, there is a separate class.
+        depth a parameter in all of NegativeWeightFinder's methods, there is this separate class.
 
-        todo: because of python's floating point precision, the out
         :param graph: A graph with 'weight' and 'depth' attributes on all edges.
         """
         super(NegativeWeightDepthFinder, self).__init__(graph)
@@ -220,6 +219,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             # Initialize all distance_to values to infinity and all predecessor_to values to None
             self.distance_to[node] = float('Inf')
             self.predecessor_to[node] = PrioritySet()
+            self.depth_nodes_to[node] = float('Inf')
             # todo: see if it is more likely for a transaction to be limited by amount present at node or edge depth.
             self.distance_from[node] = float('Inf')
             self.predecessor_from[node] = PrioritySet()
@@ -247,22 +247,10 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             for edge in self.graph.edges(data=True):
                 self.relax(edge)
 
-        for edge in self.graph.edges(data=True, nbunch=source):
-            if self.distance_to[edge[0]] != self.depth_nodes_to[edge[0]]:
-                try:
-                    yield self._retrace_negative_loop(edge[0],
-                                                      loop_from_source=loop_from_source,
-                                                      source=source,
-                                                      ensure_profit=ensure_profit,
-                                                      unique_paths=unique_paths)
-                except SeenNodeError:
-                    pass
-
         # for edge in self.graph.edges(data=True):
-        #     depth = min(math.exp(-self.distance_to[edge[0]]), edge[2]['depth'])
-        #     if edge[2]['weight'] - math.log(depth) < self.distance_to[edge[1]]:
+        #     if self.distance_to[edge[1]] < self.depth_nodes_to[edge[1]]:
         #         try:
-        #             yield self._retrace_negative_loop(edge[1],
+        #             yield self._retrace_negative_loop(edge[0],
         #                                               loop_from_source=loop_from_source,
         #                                               source=source,
         #                                               ensure_profit=ensure_profit,
@@ -270,14 +258,31 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         #         except SeenNodeError:
         #             pass
 
+        for edge in self.graph.edges(data=True):
+            depth = max(self.distance_to[edge[0]], edge[2]['depth'])
+            if edge[2]['weight'] + depth < self.distance_to[edge[1]]:
+                try:
+                    yield self._retrace_negative_loop(edge[1],
+                                                      loop_from_source=loop_from_source,
+                                                      source=source,
+                                                      ensure_profit=ensure_profit,
+                                                      unique_paths=unique_paths)
+                except SeenNodeError:
+                    pass
+            elif edge[2]['weight'] + depth < self.distance_to[edge[1]]:
+                print('equal')
+            else:
+                print(edge)
+                print('greater than by {} '.format(edge[2]['weight'] + depth - self.distance_to[edge[1]]))
+
     def relax(self, edge):
         # edge[1] is the head node of the edge, edge[0] is the tail node.
-        depth = min(math.exp(-self.distance_to[edge[0]]), edge[2]['depth'])
+        depth = max(self.distance_to[edge[0]], edge[2]['depth'])
         # if the least distance from edge[0] to source (accounting for market depths) + the weight of edge * depth <
         # the least distance to edge[1]
-        if edge[2]['weight'] - math.log(depth) < self.distance_to[edge[1]]:
-            self.distance_to[edge[1]] = edge[2]['weight'] - math.log(depth)
-            self.depth_nodes_to[edge[0]] = self.distance_to[edge[0]]
+        if edge[2]['weight'] + depth < self.distance_to[edge[1]]:
+            self.distance_to[edge[1]] = edge[2]['weight'] + depth
+            self.depth_nodes_to[edge[1]] = self.distance_to[edge[1]]
 
         # todo: there must be a more efficient way to order neighbors by preceding path weights
         # no matter what, adds this edge to the PrioritySet in distance_to
@@ -309,8 +314,8 @@ def calculate_profit_ratio_for_path(graph, path, depth=False):
             start = path[i]
             end = path[i + 1]
             if depth:
-                trade_volume = min(ratio, graph[start][end]['depth'])
-                ratio = math.exp(-graph[start][end]['weight']) * trade_volume
+                depth = min(ratio, math.exp(-graph[start][end]['depth']))
+                ratio = math.exp(-graph[start][end]['weight']) * depth
             else:
                 ratio *= math.exp(-graph[start][end]['weight'])
 

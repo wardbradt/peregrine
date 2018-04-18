@@ -46,10 +46,9 @@ def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, s
         if i + 1 < len(path):
             start = path[i]
             end = path[i + 1]
-            printed_line = ""
 
             if depth:
-                volume = min(starting_amount, graph[start][end]['depth'])
+                volume = min(starting_amount, math.exp(-graph[start][end]['depth']))
                 starting_amount = math.exp(-graph[start][end]['weight']) * volume
             else:
                 starting_amount *= math.exp(-graph[start][end]['weight'])
