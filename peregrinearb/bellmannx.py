@@ -210,6 +210,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         :param graph: A graph with 'weight' and 'depth' attributes on all edges.
         """
         super(NegativeWeightDepthFinder, self).__init__(graph)
+        # The amount of currency available at each node
         self.depth_nodes_to = {}
         # todo: implement self.depth_nodes_from
         self.depth_nodes_from = {}
@@ -219,7 +220,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             # Initialize all distance_to values to infinity and all predecessor_to values to None
             self.distance_to[node] = float('Inf')
             self.predecessor_to[node] = PrioritySet()
-            self.depth_nodes_to[node] = float('Inf')
+            self.depth_nodes_to[node] = 0
             # todo: see if it is more likely for a transaction to be limited by amount present at node or edge depth.
             self.distance_from[node] = float('Inf')
             self.predecessor_from[node] = PrioritySet()
@@ -247,20 +248,8 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             for edge in self.graph.edges(data=True):
                 self.relax(edge)
 
-        # for edge in self.graph.edges(data=True):
-        #     if self.distance_to[edge[1]] < self.depth_nodes_to[edge[1]]:
-        #         try:
-        #             yield self._retrace_negative_loop(edge[0],
-        #                                               loop_from_source=loop_from_source,
-        #                                               source=source,
-        #                                               ensure_profit=ensure_profit,
-        #                                               unique_paths=unique_paths)
-        #         except SeenNodeError:
-        #             pass
-
         for edge in self.graph.edges(data=True):
-            depth = max(self.distance_to[edge[0]], edge[2]['depth'])
-            if edge[2]['weight'] + depth < self.distance_to[edge[1]]:
+            if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 try:
                     yield self._retrace_negative_loop(edge[1],
                                                       loop_from_source=loop_from_source,
@@ -268,12 +257,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
                                                       ensure_profit=ensure_profit,
                                                       unique_paths=unique_paths)
                 except SeenNodeError:
-                    pass
-            elif edge[2]['weight'] + depth < self.distance_to[edge[1]]:
-                print('equal')
-            else:
-                print(edge)
-                print('greater than by {} '.format(edge[2]['weight'] + depth - self.distance_to[edge[1]]))
+                    continue
 
     def relax(self, edge):
         # edge[1] is the head node of the edge, edge[0] is the tail node.
@@ -282,7 +266,6 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         # the least distance to edge[1]
         if edge[2]['weight'] + depth < self.distance_to[edge[1]]:
             self.distance_to[edge[1]] = edge[2]['weight'] + depth
-            self.depth_nodes_to[edge[1]] = self.distance_to[edge[1]]
 
         # todo: there must be a more efficient way to order neighbors by preceding path weights
         # no matter what, adds this edge to the PrioritySet in distance_to
