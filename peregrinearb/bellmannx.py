@@ -17,7 +17,7 @@ class NegativeWeightFinder:
         self.distance_from = {}
 
         self.seen_nodes = set()
-    
+
     def initialize(self, source):
         for node in self.graph:
             # Initialize all distance_to values to infinity and all predecessor_to values to None
@@ -34,7 +34,7 @@ class NegativeWeightFinder:
         """
         Note: the loop_from_source parameter, when set to True, currently outputs a less than ideal path from source
         to the beginning of the arbitrage opportunity.
-        
+        :param unique_paths: If true, ensures that no duplicate paths are returned.
         :param ensure_profit: if true, ensures that the weight of the returned path is greater able to be arbitraged
         for a profit. if false, the resultant path may not be profitable because although it contains a negative cycle
         (arbitrage-able loop), the weight of the paths to and from that cycle are more positive than the absolute value
@@ -70,7 +70,7 @@ class NegativeWeightFinder:
             self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
 
         # todo: there must be a more efficient way to order neighbors by preceding path weights
-        # no matter what, adds this edge to the PrioritySet in distance_to
+        # no matter what, adds this edge to the PrioritySet in predecessor_to
         self.predecessor_to[edge[1]].add(edge[0], self.distance_to[edge[0]] + edge[2]['weight'])
 
         if self.distance_from[edge[1]] + edge[2]['weight'] < self.distance_from[edge[0]]:
@@ -138,7 +138,8 @@ class NegativeWeightFinder:
                             arbitrage_loop = arbitrage_loop[index:] + arbitrage_loop[:index]
 
                         # the weight of the path that will be taken to make arbitrage_loop start and end at source
-                        return_path_weight = self.distance_to[arbitrage_loop[0]] + self.distance_from[arbitrage_loop[-1]]
+                        return_path_weight = self.distance_to[arbitrage_loop[0]] + self.distance_from[
+                            arbitrage_loop[-1]]
                         loop_weight = 0
                         if return_path_weight > 0:
                             # todo: this is not the most efficient way to get the weight of arbitrage_loop
@@ -198,19 +199,77 @@ class NegativeWeightFinder:
             self.predecessor_from[node].reset()
 
 
-def bellman_ford(graph, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
+class NegativeWeightDepthFinder(NegativeWeightFinder):
+
+    def __init__(self, graph: nx.Graph):
+        """
+        The algorithm when accounting for depth is significantly different at every step that it would necessitate
+        almost constant conditionals to check if depth would be accounted for. This is why rather than simply make
+        depth a parameter in all of NegativeWeightFinder's methods, there is this separate class.
+
+        :param graph: A graph with 'weight' and 'depth' attributes on all edges.
+        """
+        super(NegativeWeightDepthFinder, self).__init__(graph)
+        # The amount of currency available at each node
+        self.depth_nodes_to = {}
+        # todo: implement self.depth_nodes_from
+        self.depth_nodes_from = {}
+
+    def initialize(self, source):
+        for node in self.graph:
+            # Initialize all distance_to values to infinity and all predecessor_to values to None
+            self.distance_to[node] = float('Inf')
+            self.predecessor_to[node] = PrioritySet()
+            self.depth_nodes_to[node] = 0
+            # todo: see if it is more likely for a transaction to be limited by amount present at node or edge depth.
+            self.distance_from[node] = float('Inf')
+            self.predecessor_from[node] = PrioritySet()
+
+        # The distance from any node to (itself) == 0
+        self.distance_to[source] = 0
+        self.distance_from[source] = 0
+
+    def relax(self, edge):
+        # edge[1] is the head node of the edge, edge[0] is the tail node.
+        depth = max(self.distance_to[edge[0]], edge[2]['depth'])
+        # if the least distance from edge[0] to source (accounting for market depths) + the weight of edge * depth <
+        # the least distance to edge[1]
+        if edge[2]['weight'] + depth < self.distance_to[edge[1]]:
+            self.distance_to[edge[1]] = edge[2]['weight'] + depth
+
+        # todo: there must be a more efficient way to order neighbors by preceding path weights
+        # no matter what, adds this edge to the PrioritySet in predecessor_to
+        self.predecessor_to[edge[1]].add(edge[0], edge[2]['weight'] + depth)
+
+        if self.distance_from[edge[1]] + edge[2]['weight'] < self.distance_from[edge[0]]:
+            self.distance_from[edge[0]] = self.distance_from[edge[1]] + edge[2]['weight']
+
+        self.predecessor_from[edge[0]].add(edge[1],
+                                           self.distance_from[edge[1]] + edge[2]['weight'])
+
+        return True
+
+
+def bellman_ford(graph, source, loop_from_source=True, ensure_profit=False, unique_paths=False, depth=False):
     """
     Look at the docstring of the bellman_ford method in the NegativeWeightFinder class as this is a wrapper method.
     """
-    return NegativeWeightFinder(graph).bellman_ford(source, loop_from_source, ensure_profit, unique_paths=unique_paths)
+    if not depth:
+        return NegativeWeightFinder(graph).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
+    else:
+        return NegativeWeightDepthFinder(graph).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
 
 
-def calculate_profit_ratio_for_path(graph, path):
-    total = 0
+def calculate_profit_ratio_for_path(graph, path, depth=False):
+    ratio = 1
     for i in range(len(path)):
         if i + 1 < len(path):
             start = path[i]
             end = path[i + 1]
-            total += graph[start][end]['weight']
+            if depth:
+                depth = min(ratio, math.exp(-graph[start][end]['depth']))
+                ratio = math.exp(-graph[start][end]['weight']) * depth
+            else:
+                ratio *= math.exp(-graph[start][end]['weight'])
 
-    return math.exp(-total)
+    return ratio

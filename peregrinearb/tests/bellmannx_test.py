@@ -89,4 +89,40 @@ class TestBellmannx(TestCase):
                 weight += graph[path[i]][path[i + 1]]['weight']
             self.assertLess(weight, 0)
 
+    def test_depth(self):
+        # currently does not work as bellman_ford (of NegativeWeightDepthFinder) is broken.
+        for i in range(1, 5):
+            G = nx.DiGraph()
+            G.add_edge('A', 'B', weight=-0.69, depth=1)
+            G.add_edge('B', 'C', weight=-1.1, depth=1)
+            G.add_edge('C', 'A', weight=1.39, depth=i)
+            paths = bellman_ford(G, 'A', unique_paths=True, depth=True, loop_from_source=False)
+            total = 0
+            for path in paths:
+                total += 1
+            self.assertEquals(total, 0)
+        for i in range(6, 8):
+            G = nx.DiGraph()
+            G.add_edge('A', 'B', weight=-0.69, depth=1)
+            G.add_edge('B', 'C', weight=-1.1, depth=1)
+            G.add_edge('C', 'A', weight=1.39, depth=i)
+            paths = bellman_ford(G, 'A', unique_paths=True, depth=True)
+            total = 0
+            for path in paths:
+                total += 1
+            self.assertEquals(total, 1)
+        # i = 0
+        # for path in paths:
+        #     i += 1
+        #     # todo: because of python's floating point precision, calculate_profit_ratio_for_path returns 1.4918...
+        #     # this is not the case with the normal call to bellman_ford, so figure out why this is different.
+        #     self.assertEquals(1.5, calculate_profit_ratio_for_path(G, path))
 
+    def test_ratio(self):
+        G = nx.DiGraph()
+        G.add_edge('A', 'B', weight=-0.69)
+        G.add_edge('B', 'C', weight=-1.1)
+        G.add_edge('C', 'A', weight=1.39)
+        paths = bellman_ford(G, 'A', unique_paths=True, loop_from_source=False)
+        for path in paths:
+            self.assertEquals(calculate_profit_ratio_for_path(G, path), 1.5)

@@ -36,27 +36,37 @@ def get_exchanges_for_market(market_ticker):
     raise ExchangeNotInCollectionsError(market_ticker)
 
 
-def print_profit_opportunity_for_path(graph, path, round_to=None):
+def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, starting_amount=100):
     if not path:
         return
 
-    money = 100
-    print("Starting with %(money)i in %(currency)s" % {"money": money, "currency": path[0]})
+    print("Starting with {} in {}".format(starting_amount, path[0]))
 
     for i in range(len(path)):
         if i + 1 < len(path):
             start = path[i]
             end = path[i + 1]
-            # todo: rate should not have to be inversed
-            rate = math.exp(-graph[start][end]['weight'])
-            money *= rate
-            if round_to is None:
-                print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end, "rate": rate,
-                                                                        "money": money})
+
+            if depth:
+                volume = min(starting_amount, math.exp(-graph[start][end]['depth']))
+                starting_amount = math.exp(-graph[start][end]['weight']) * volume
             else:
-                print("%(start)s to %(end)s at %(rate)f = %(money)f" % {"start": start, "end": end,
-                                                                        "rate": round(rate, round_to),
-                                                                        "money": round(money, round_to)})
+                starting_amount *= math.exp(-graph[start][end]['weight'])
+
+            if round_to is None:
+                rate = math.exp(-graph[start][end]['weight'])
+                resulting_amount = starting_amount
+            else:
+                rate = round(math.exp(-graph[start][end]['weight']), round_to)
+                resulting_amount = round(starting_amount, round_to)
+
+            printed_line = "{} to {} at {} = {}".format(start, end, rate, resulting_amount)
+
+            # todo: add a round_to option for depth
+            if depth:
+                printed_line += " with {} of {} traded".format(volume, start)
+
+            print(printed_line)
 
 
 def print_profit_opportunity_for_path_multi(graph: nx.Graph, path, print_output=True, round_to=None, shorten=False):
