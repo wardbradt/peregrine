@@ -9,28 +9,48 @@ class SeenNodeError(Exception):
 
 class NegativeWeightFinder:
 
-    def __init__(self, graph: nx.Graph):
+    def __init__(self, graph: nx.Graph, depth=False):
         self.graph = graph
         self.predecessor_to = {}
+        # the maximum weight which can be transferred from source to each node
         self.distance_to = {}
         self.predecessor_from = {}
+        # the maximum weight which can be transferred from each node to source
         self.distance_from = {}
+
+        if depth:
+            # equivalent to hasattr(self, 'depth_nodes_to') and hasattr(self, 'depth_nodes_from')
+            self.depth = True
+            # like distance_to, but accounts for depth
+            self.depth_nodes_to = {}
+            # like distance_from, but accounts for depth
+            self.depth_nodes_from = {}
+        else:
+            self.depth = False
 
         self.seen_nodes = set()
 
+    def _set_basic_fields(self, node):
+        # Initialize all distance_to values to infinity and all predecessor_to values to None
+        self.distance_to[node] = float('Inf')
+        self.predecessor_to[node] = PrioritySet()
+        self.distance_from[node] = float('Inf')
+        self.predecessor_from[node] = PrioritySet()
+
     def initialize(self, source):
-        for node in self.graph:
-            # Initialize all distance_to values to infinity and all predecessor_to values to None
-            self.distance_to[node] = float('Inf')
-            self.predecessor_to[node] = PrioritySet()
-            self.distance_from[node] = float('Inf')
-            self.predecessor_from[node] = PrioritySet()
+        if self.depth:
+            for node in self.graph:
+                self._set_basic_fields(node)
+                self.depth_nodes_to[node] = 0
+        else:
+            for node in self.graph:
+                self._set_basic_fields(node)
 
         # The distance from any node to (itself) == 0
         self.distance_to[source] = 0
         self.distance_from[source] = 0
 
-    def bellman_ford(self, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
+    def bellman_ford(self, source, loop_from_source=False, ensure_profit=False, unique_paths=False):
         """
         Note: the loop_from_source parameter, when set to True, currently outputs a less than ideal path from source
         to the beginning of the arbitrage opportunity.
@@ -54,20 +74,38 @@ class NegativeWeightFinder:
             for edge in self.graph.edges(data=True):
                 self.relax(edge)
 
+        return self._check_final_condition(loop_from_source=loop_from_source,
+                                           source=source,
+                                           ensure_profit=ensure_profit,
+                                           unique_paths=unique_paths)
+
+    def _check_final_condition(self, **kwargs):
+        """
+        NegativeWeightFinder and its children execute the Bellman-Ford algorithm or some variation of it. A main
+        variation among the classes is the "final condition," which typically tells whether or not a negative cycle
+        exists using that class's specific parameters.
+
+        For the NegativeWeightFinder class, the final condition is whether or not a negative cycle exists. If this
+        condition is true, this method will yield all negatively weighted paths.
+
+        All subclasses of NegativeWeightFinder should return a generator of paths which satisfy the final condition.
+        """
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 try:
                     yield self._retrace_negative_loop(edge[1],
-                                                      loop_from_source=loop_from_source,
-                                                      source=source,
-                                                      ensure_profit=ensure_profit,
-                                                      unique_paths=unique_paths)
+                                                      loop_from_source=kwargs['loop_from_source'],
+                                                      source=kwargs['source'],
+                                                      ensure_profit=kwargs['ensure_profit'],
+                                                      unique_paths=kwargs['unique_paths'])
                 except SeenNodeError:
                     continue
 
     def relax(self, edge):
         if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
             self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
+            if self.depth:
+                self.depth_nodes_to[edge[1]] = max(self.distance_to[edge[0]], edge[2]['depth']) + edge[2]['weight']
 
         # todo: there must be a more efficient way to order neighbors by preceding path weights
         # no matter what, adds this edge to the PrioritySet in predecessor_to
@@ -75,6 +113,8 @@ class NegativeWeightFinder:
 
         if self.distance_from[edge[1]] + edge[2]['weight'] < self.distance_from[edge[0]]:
             self.distance_from[edge[0]] = self.distance_from[edge[1]] + edge[2]['weight']
+            if self.depth:
+                self.depth_nodes_from[edge[0]] = max(self.distance_from[edge[1]], edge[2]['depth']) + edge[2]['weight']
 
         self.predecessor_from[edge[0]].add(edge[1],
                                            self.distance_from[edge[1]] + edge[2]['weight'])
@@ -203,27 +243,28 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
 
     def __init__(self, graph: nx.Graph):
         """
+        This variation of NegativeWeightFinder finds the most negative weight cycle including a source node in a
+        graph. This varies from setting depth=True in NegativeWeightFinder in the following ways:
+
+        1. NegativeWeightFinder, when depth=True, finds the most negatively weighted cycle while keeping track of
+        the weight (or currency) available at each node. After the algorithm has completed, it reveals the negative
+        weight accounting for depth of the most negatively-weighted cycle found without accounting for depth. Thus,
+        it may return a path which is the most negatively-weighted without accounting for depth but not when accounting
+        for depth. However, this version finds the most most negatively-weighted cycle accounting for depth.
+
+        2. NegativeWeightFinder's version can detect any negative cycle in the given graph (regardless of whether
+        or not they include the source). This version is only able to detect negative cycles which start at the source.
+
         The algorithm when accounting for depth is significantly different at every step that it would necessitate
         almost constant conditionals to check if depth would be accounted for. This is why rather than simply make
         depth a parameter in all of NegativeWeightFinder's methods, there is this separate class.
-
         :param graph: A graph with 'weight' and 'depth' attributes on all edges.
         """
         super(NegativeWeightDepthFinder, self).__init__(graph)
-        # The amount of currency available at each node
-        self.depth_nodes_to = {}
-        # todo: implement self.depth_nodes_from
-        self.depth_nodes_from = {}
 
     def initialize(self, source):
         for node in self.graph:
-            # Initialize all distance_to values to infinity and all predecessor_to values to None
-            self.distance_to[node] = float('Inf')
-            self.predecessor_to[node] = PrioritySet()
-            self.depth_nodes_to[node] = 0
-            # todo: see if it is more likely for a transaction to be limited by amount present at node or edge depth.
-            self.distance_from[node] = float('Inf')
-            self.predecessor_from[node] = PrioritySet()
+            self._set_basic_fields(node)
 
         # The distance from any node to (itself) == 0
         self.distance_to[source] = 0
@@ -231,37 +272,53 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
 
     def relax(self, edge):
         # edge[1] is the head node of the edge, edge[0] is the tail node.
+        # because edge[2]['depth'] and self.distance_to[edge[0] are negative logs, we want the max, as the min of
+        # e raised to the negative of these will return the max of their values.
         depth = max(self.distance_to[edge[0]], edge[2]['depth'])
         # if the least distance from edge[0] to source (accounting for market depths) + the weight of edge * depth <
         # the least distance to edge[1]
         if edge[2]['weight'] + depth < self.distance_to[edge[1]]:
             self.distance_to[edge[1]] = edge[2]['weight'] + depth
-
         # todo: there must be a more efficient way to order neighbors by preceding path weights
         # no matter what, adds this edge to the PrioritySet in predecessor_to
         self.predecessor_to[edge[1]].add(edge[0], edge[2]['weight'] + depth)
 
-        if self.distance_from[edge[1]] + edge[2]['weight'] < self.distance_from[edge[0]]:
-            self.distance_from[edge[0]] = self.distance_from[edge[1]] + edge[2]['weight']
-
-        self.predecessor_from[edge[0]].add(edge[1],
-                                           self.distance_from[edge[1]] + edge[2]['weight'])
+        # predecessor_from and distance_from are not used in this class as all paths include source. however, should
+        # they need to be used in the future, this is the code which allows them to be used in the same manner as
+        # distance_to is above.
+        # # note we now compare edge[2]['depth'] to distance_from[edge[1]]; it was previously compared to
+        # # distance_to[edge[0]], edge[2]['depth']
+        # depth = max(self.distance_from[edge[1]], edge[2]['depth'])
+        #
+        # if edge[2]['weight'] + depth < self.distance_from[edge[0]]:
+        #     self.distance_from[edge[0]] = edge[2]['weight'] + depth
+        #
+        # self.predecessor_from[edge[0]].add(edge[1],
+        #                                    self.distance_from[edge[1]] + edge[2]['weight'])
 
         return True
 
+    def _check_final_condition(self, **kwargs):
+        if 'source' not in kwargs.keys():
+            raise ValueError('keyword arguments for _check_final_condition should contain source. This error'
+                             'should never show.')
 
-def bellman_ford(graph, source, loop_from_source=True, ensure_profit=False, unique_paths=False, depth=False):
+        if self.distance_to[kwargs['source']] < 0:
+            yield self._retrace_negative_loop(kwargs['source'],
+                                              loop_from_source=False,
+                                              ensure_profit=False,
+                                              unique_paths=True)
+
+
+def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, unique_paths=False, depth=False):
     """
     Look at the docstring of the bellman_ford method in the NegativeWeightFinder class as this is a wrapper method.
     """
-    if not depth:
-        return NegativeWeightFinder(graph).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
-    else:
-        return NegativeWeightDepthFinder(graph).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
+    return NegativeWeightFinder(graph, depth).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
 
 
-def calculate_profit_ratio_for_path(graph, path, depth=False):
-    ratio = 1
+def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1):
+    ratio = starting_amount
     for i in range(len(path)):
         if i + 1 < len(path):
             start = path[i]
@@ -272,4 +329,4 @@ def calculate_profit_ratio_for_path(graph, path, depth=False):
             else:
                 ratio *= math.exp(-graph[start][end]['weight'])
 
-    return ratio
+    return ratio / starting_amount

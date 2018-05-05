@@ -62,7 +62,7 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
                                                  self.distance_from[edge_bunch[1]] + ideal_edge['weight'])
 
 
-def bellman_ford_multi(graph: nx.MultiGraph, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
+def bellman_ford_multi(graph: nx.MultiGraph, source, loop_from_source=False, ensure_profit=False, unique_paths=False):
     """
     Returns a 2-tuple containing the graph with most negative weights in every edge bunch and a generator which iterates
     over the negative cycle in graph
