@@ -1,8 +1,9 @@
 from unittest import TestCase
 from peregrinearb import bellman_ford_multi, multi_digraph_from_json, multi_digraph_from_dict, \
-    calculate_profit_ratio_for_path, bellman_ford
+    calculate_profit_ratio_for_path, bellman_ford, NegativeWeightFinder, NegativeWeightDepthFinder
 import json
 import networkx as nx
+import math
 
 
 def graph_from_dict(graph_dict):
@@ -55,7 +56,7 @@ class TestBellmanFordMultiGraph(TestCase):
     def test_positive_ratio(self):
         graph = multi_digraph_from_json('test_multigraph.json')
         for node in graph:
-            new_graph, paths = bellman_ford_multi(graph, node)
+            new_graph, paths = bellman_ford_multi(graph, node, loop_from_source=False)
             for path in paths:
                 if path:
                     # assert that the path is a negative weight cycle
@@ -90,33 +91,64 @@ class TestBellmannx(TestCase):
             self.assertLess(weight, 0)
 
     def test_depth(self):
-        # currently does not work as bellman_ford (of NegativeWeightDepthFinder) is broken.
-        for i in range(1, 5):
+        # currently does not work as bellman_ford's depth feature is broken/ in development.
+        for i in range(1, 4):
             G = nx.DiGraph()
-            G.add_edge('A', 'B', weight=-0.69, depth=1)
-            G.add_edge('B', 'C', weight=-1.1, depth=1)
-            G.add_edge('C', 'A', weight=1.39, depth=i)
-            paths = bellman_ford(G, 'A', unique_paths=True, depth=True, loop_from_source=False)
+            # for the depth of A->B, 0 == -math.log(1). also note weight of A->B == depth B->C.
+            G.add_edge('A', 'B', weight=-math.log(2), depth=0)
+            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
+            # there should be weight of 6 after going through A->B->C.
+            G.add_edge('C', 'A', weight=-math.log(1/8), depth=-math.log(i))
+            finder = NegativeWeightFinder(G, depth=True)
+            paths = finder.bellman_ford('A', loop_from_source=False, unique_paths=True)
+
             total = 0
             for path in paths:
-                total += 1
-            self.assertEquals(total, 0)
+                self.assertLessEqual(1, calculate_profit_ratio_for_path(G, path, depth=True, starting_amount=1))
         for i in range(6, 8):
             G = nx.DiGraph()
-            G.add_edge('A', 'B', weight=-0.69, depth=1)
-            G.add_edge('B', 'C', weight=-1.1, depth=1)
-            G.add_edge('C', 'A', weight=1.39, depth=i)
+            G.add_edge('A', 'B', weight=-math.log(2), depth=0)
+            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
+            G.add_edge('C', 'A', weight=-math.log(1 / 4), depth=-math.log(i))
             paths = bellman_ford(G, 'A', unique_paths=True, depth=True)
+
+    def test_true_depth(self):
+        """
+        Tests NegativeWeightDepthFinder
+        """
+        # Tests that a negative loop starting at A cannot exist because the minimum weight of a cycle from and to A
+        # is approximately 0.154, which is the negative log of 6/7.
+        for i in range (1, 4):
+            # todo: must we reinitialize G?
+            G = nx.DiGraph()
+            G.add_edge('A', 'B', weight=-math.log(2), depth=0)
+            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
+            G.add_edge('C', 'A', weight=-math.log(2 / 7), depth=-math.log(i))
+
+            paths = NegativeWeightDepthFinder(G).bellman_ford('A')
             total = 0
             for path in paths:
                 total += 1
-            self.assertEquals(total, 1)
-        # i = 0
-        # for path in paths:
-        #     i += 1
-        #     # todo: because of python's floating point precision, calculate_profit_ratio_for_path returns 1.4918...
-        #     # this is not the case with the normal call to bellman_ford, so figure out why this is different.
-        #     self.assertEquals(1.5, calculate_profit_ratio_for_path(G, path))
+
+            # asserts that there were no paths with negative weight given depths between -math.log(1) and -math.log(3)
+            # for the edge C->A
+            self.assertEqual(total, 0)
+
+        total = 0
+        for i in range(4, 7):
+            G = nx.DiGraph()
+            G.add_edge('A', 'B', weight=-math.log(2), depth=0)
+            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
+            G.add_edge('C', 'A', weight=-math.log(2 / 7), depth=-math.log(i))
+
+            paths = NegativeWeightDepthFinder(G).bellman_ford('A')
+            for path in paths:
+                # asserts that each of the 3 paths has a profit ratio of 8/7, 10/7, and 12/7, respectively.
+                # Because of Python float precision, the last digit of either value is sometimes not equal to the other.
+                self.assertAlmostEqual(calculate_profit_ratio_for_path(G, path, depth=True), 8 / 7 + (i - 4) * (2/7))
+                total += 1
+        # asserts that there is a negatively-weighted path when the depth for the edge C->A < -math.log(4)
+        self.assertEqual(total, 3)
 
     def test_ratio(self):
         G = nx.DiGraph()
