@@ -143,8 +143,8 @@ class TestBellmannx(TestCase):
 
             paths = NegativeWeightDepthFinder(G).bellman_ford('A')
             for path in paths:
-                x = calculate_profit_ratio_for_path(G, path)
-                self.assertEqual(calculate_profit_ratio_for_path(G, path, depth=True), 8 / 7 + (i - 4) * (2/7))
+                # Because of Python float precision, the last digit of either value is sometimes not equal to the other.
+                self.assertAlmostEqual(calculate_profit_ratio_for_path(G, path, depth=True), 8 / 7 + (i - 4) * (2/7))
                 total += 1
         # asserts that there is a negatively-weighted path when the depth for the edge C->A < -math.log(4)
         self.assertEqual(total, 3)
