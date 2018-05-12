@@ -149,8 +149,6 @@ class TestBellmannx(TestCase):
         # asserts that there is a negatively-weighted path when the depth for the edge C->A < -math.log(4)
         self.assertEqual(total, 3)
 
-
-
     def test_ratio(self):
         G = nx.DiGraph()
         G.add_edge('A', 'B', weight=-0.69)
