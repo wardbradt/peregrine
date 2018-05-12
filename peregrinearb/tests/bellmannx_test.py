@@ -143,6 +143,7 @@ class TestBellmannx(TestCase):
 
             paths = NegativeWeightDepthFinder(G).bellman_ford('A')
             for path in paths:
+                # asserts that each of the 3 paths has a profit ratio of 8/7, 10/7, and 12/7, respectively.
                 # Because of Python float precision, the last digit of either value is sometimes not equal to the other.
                 self.assertAlmostEqual(calculate_profit_ratio_for_path(G, path, depth=True), 8 / 7 + (i - 4) * (2/7))
                 total += 1

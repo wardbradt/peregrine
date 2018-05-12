@@ -334,7 +334,7 @@ def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, uni
         # todo: is there a way to compress the next 5 lines with comprehension
         for path in paths:
             if calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=starting_amount) > \
-                starting_amount:
+                    starting_amount:
                 yield path
 
     else:
