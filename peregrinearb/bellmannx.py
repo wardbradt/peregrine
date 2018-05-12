@@ -50,7 +50,7 @@ class NegativeWeightFinder:
         self.distance_to[source] = 0
         self.distance_from[source] = 0
 
-    def bellman_ford(self, source, loop_from_source=False, ensure_profit=False, unique_paths=False):
+    def bellman_ford(self, source, loop_from_source=False, ensure_profit=False, unique_paths=True):
         """
         Note: the loop_from_source parameter, when set to True, currently outputs a less than ideal path from source
         to the beginning of the arbitrage opportunity.
@@ -82,13 +82,17 @@ class NegativeWeightFinder:
     def _check_final_condition(self, **kwargs):
         """
         NegativeWeightFinder and its children execute the Bellman-Ford algorithm or some variation of it. A main
-        variation among the classes is the "final condition," which typically tells whether or not a negative cycle
-        exists using that class's specific parameters.
+        variation among the classes is the "final condition," which typically checks whether or not a negative cycle
+        exists using that class's specific parameters. If the final condition is true, _check_final_condition returns
+        a generator which should yield paths in self.graph.
 
         For the NegativeWeightFinder class, the final condition is whether or not a negative cycle exists. If this
-        condition is true, this method will yield all negatively weighted paths.
+        condition is true, this method will yield negatively weighted paths.
 
-        All subclasses of NegativeWeightFinder should return a generator of paths which satisfy the final condition.
+        All subclasses of NegativeWeightFinder should return a generator of paths which satisfy the final condition. If
+        subclassing NegativeWeightFinder and overriding _check_final_condition and planning to publish this subclass, it
+        is helpful to describe in the docstring what the final condition is and, if not negative cycles, what the
+        method's returned generator yields.
         """
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
@@ -299,6 +303,12 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         return True
 
     def _check_final_condition(self, **kwargs):
+        """
+        The final condition is if a negative loop exists which contains kwargs['source']. This is checked by seeing if
+        self.distance_to[kwargs['source']] < 0. If true, yields that negative cycle.
+        :param kwargs:
+        :return:
+        """
         if 'source' not in kwargs.keys():
             raise ValueError('keyword arguments for _check_final_condition should contain source. This error'
                              'should never show.')
@@ -310,11 +320,25 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
                                               unique_paths=True)
 
 
-def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, unique_paths=False, depth=False):
+def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, unique_paths=False, depth=False,
+                 starting_amount=1):
     """
-    Look at the docstring of the bellman_ford method in the NegativeWeightFinder class as this is a wrapper method.
+    Look at the docstring of the bellman_ford method in the NegativeWeightFinder class. (This is a static wrapper
+    function.)
+
+    If depth is true, yields all negatively weighted paths (accounting for depth) when starting with a weight of
+    starting_amount.
     """
-    return NegativeWeightFinder(graph, depth).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
+    if depth:
+        paths = NegativeWeightFinder(graph, depth).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
+        # todo: is there a way to compress the next 5 lines with comprehension
+        for path in paths:
+            if calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=starting_amount) > \
+                starting_amount:
+                yield path
+
+    else:
+        return NegativeWeightFinder(graph, depth).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
 
 
 def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1):
