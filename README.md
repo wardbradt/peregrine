@@ -157,7 +157,6 @@ BCH to ETH at 1.8874401 = 118.18480885571941 on bittrex for BCH/ETH
 * Implement a fix to convert from USDT to USD and back again for markets based on USDT
 * Package for pip
 * Write better/ more examples and unit tests
-* Implement rotation of `arbitrage_loop` when the source node is in the found path and `loop_from_source=True` in `retrace_negative_loop` in bellmannx.py.
 * Fix frequent `Unclosed connector` ccxt error (look at [this issue](https://github.com/ccxt/ccxt/issues/2092))
 ## Potential Enhancements
 
