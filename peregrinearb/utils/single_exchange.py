@@ -98,8 +98,19 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
                                       suppress=None, ticker=None, depth=False):
     """
     Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
-    edges). If depth, also adds an attribute 'depth' to each edge which represents the current volume of orders
+    edges).
+    :param exchange: A ccxt Exchange object
+    :param market_name: A string representing a cryptocurrency market formatted like so:
+    '{base_currency}/{quote_currency}'
+    :param graph: A Networkx DiGraph upon
+    :param log: If the edge weights given to the graph should be the negative logarithm of the ask and bid prices. This
+    is necessary to calculate arbitrage opportunities.
+    :param fee: The fee applied to the base currency represented as a decimal.
+    :param suppress: A list or set which tells which types of warnings to not throw. Accepted elements are 'markets'.
+    :param ticker: A dictionary representing a market as returned by ccxt's Exchange's fetch_ticker method
+    :param depth: If True, also adds an attribute 'depth' to each edge which represents the current volume of orders
     available at the price represented by the 'weight' attribute of each edge.
+    :return:
     """
     if ticker is None:
         try:
