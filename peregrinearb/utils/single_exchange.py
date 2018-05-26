@@ -62,6 +62,8 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
 
     await asyncio.wait(tasks)
 
+    await exchange.close()
+
     return graph
 
 
@@ -101,7 +103,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     """
     if ticker is None:
         try:
-            order_book = await exchange.fetch_order_book(market_name)
+            ticker = await exchange.fetch_ticker(market_name)
         # any error is solely because of fetch_ticker
         except:
             if 'markets' not in suppress:
@@ -112,17 +114,17 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     fee_scalar = 1 - fee
 
     try:
-        ticker_bid = order_book['bids'][0][0]
-        ticker_ask = order_book['asks'][0][0]
+        ticker_bid = ticker['bid']
+        ticker_ask = ticker['ask']
         if depth:
-            bid_volume = order_book['bids'][0][1]
-            ask_volume = order_book['asks'][0][1]
+            bid_volume = ticker['bidVolume']
+            ask_volume = ticker['askVolume']
     # ask and bid == None if this market is non existent.
     except TypeError:
         return
 
     # prevent math error when Bittrex (GEO/BTC) or other API gives 0 as ticker price
-    if ticker_ask == 0:
+    if ticker_ask == 0 or ticker_bid == 0:
         return
     try:
         base_currency, quote_currency = market_name.split('/')
@@ -137,8 +139,11 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
             graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
                            depth=ask_volume)
         else:
-            graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid))
-            graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask))
+            try:
+                graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid))
+                graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask))
+            except ValueError:
+                raise ValueError
     else:
         if depth:
             graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid, depth=bid_volume)
