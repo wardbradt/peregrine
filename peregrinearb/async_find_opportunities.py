@@ -1,5 +1,6 @@
 import ccxt.async as ccxt
 from .utils.general import get_exchanges_for_market
+import asyncio
 
 
 class OpportunityFinder:
@@ -14,8 +15,8 @@ class OpportunityFinder:
             if not name:
                 raise ValueError("if parameter name == False, parameter exchanges cannot be None.")
             exchanges = get_exchanges_for_market(market_name)
-        elif name:
-            exchanges = [getattr(ccxt, exchange_id)() for exchange_id in exchanges]
+
+        exchanges = [getattr(ccxt, exchange_id)() for exchange_id in exchanges]
 
         self.exchange_list = exchanges
         self.market_name = market_name
@@ -33,9 +34,14 @@ class OpportunityFinder:
 
         try:
             ticker = await exchange.fetch_ticker(self.market_name)
+        # A KeyError or ExchangeError occurs when the exchange does not have a market named self.market_name.
+        # Any ccxt BaseError is because of ccxt, not this code.
+        except (KeyError, ccxt.ExchangeError, ccxt.BaseError):
             await exchange.close()
-        except ccxt.BaseError:
             return
+
+        await exchange.close()
+
         try:
             ask = ticker['ask']
             bid = ticker['bid']
@@ -51,7 +57,8 @@ class OpportunityFinder:
             self.lowest_ask['exchange'] = exchange
 
     async def find_min_max(self):
-        [await self._test_bid_and_ask(exchange_name) for exchange_name in self.exchange_list]
+        tasks = [self._test_bid_and_ask(exchange_name) for exchange_name in self.exchange_list]
+        await asyncio.wait(tasks)
 
         return {'highest_bid': self.highest_bid,
                 'lowest_ask': self.lowest_ask}

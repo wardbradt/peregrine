@@ -13,6 +13,7 @@ class ExchangeNotInCollectionsError(Exception):
 async def _get_exchange(exchange_name: str):
     exchange = getattr(ccxt, exchange_name)()
     await exchange.load_markets()
+    await exchange.close()
     return exchange
 
 
