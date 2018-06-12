@@ -9,7 +9,7 @@ class SeenNodeError(Exception):
 
 class NegativeWeightFinder:
 
-    def __init__(self, graph: nx.Graph, depth=False):
+    def __init__(self, graph: nx.Graph, depth=False, starting_amount=1):
         self.graph = graph
         self.predecessor_to = {}
         # the maximum weight which can be transferred from source to each node
@@ -21,6 +21,8 @@ class NegativeWeightFinder:
         if depth:
             # equivalent to hasattr(self, 'depth_nodes_to') and hasattr(self, 'depth_nodes_from')
             self.depth = True
+            # used only when depth == True in _check_final_condition
+            self.starting_amount = starting_amount
             # like distance_to, but accounts for depth
             self.depth_nodes_to = {}
             # like distance_from, but accounts for depth
@@ -97,13 +99,22 @@ class NegativeWeightFinder:
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 try:
-                    yield self._retrace_negative_loop(edge[1],
-                                                      loop_from_source=kwargs['loop_from_source'],
-                                                      source=kwargs['source'],
-                                                      ensure_profit=kwargs['ensure_profit'],
-                                                      unique_paths=kwargs['unique_paths'])
+                    path = self._retrace_negative_loop(edge[1],
+                                                       loop_from_source=kwargs['loop_from_source'],
+                                                       source=kwargs['source'],
+                                                       ensure_profit=kwargs['ensure_profit'],
+                                                       unique_paths=kwargs['unique_paths'])
                 except SeenNodeError:
                     continue
+
+                if not self.depth:
+                    yield path
+                # if self.depth, must check that this loop is profitable accounting for depth.
+                # todo: this could be optimized to check in _retrace_negative_loop
+                else:
+                    if calculate_profit_ratio_for_path(self.graph, path, depth=False,
+                                                       starting_amount=self.starting_amount) > self.starting_amount:
+                        yield path
 
     def relax(self, edge):
         if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
@@ -329,16 +340,8 @@ def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, uni
     If depth is true, yields all negatively weighted paths (accounting for depth) when starting with a weight of
     starting_amount.
     """
-    if depth:
-        paths = NegativeWeightFinder(graph, depth).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
-        # todo: is there a way to compress the next 5 lines with comprehension
-        for path in paths:
-            if calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=starting_amount) > \
-                    starting_amount:
-                yield path
-
-    else:
-        return NegativeWeightFinder(graph, depth).bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
+    return NegativeWeightFinder(graph, depth, starting_amount).bellman_ford(source, loop_from_source, ensure_profit,
+                                                                            unique_paths)
 
 
 def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1):

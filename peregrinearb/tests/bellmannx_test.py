@@ -105,6 +105,7 @@ class TestBellmannx(TestCase):
             total = 0
             for path in paths:
                 self.assertLessEqual(1, calculate_profit_ratio_for_path(G, path, depth=True, starting_amount=1))
+
         for i in range(6, 8):
             G = nx.DiGraph()
             G.add_edge('A', 'B', weight=-math.log(2), depth=0)
@@ -118,7 +119,7 @@ class TestBellmannx(TestCase):
         """
         # Tests that a negative loop starting at A cannot exist because the minimum weight of a cycle from and to A
         # is approximately 0.154, which is the negative log of 6/7.
-        for i in range (1, 4):
+        for i in range(1, 4):
             # todo: must we reinitialize G?
             G = nx.DiGraph()
             G.add_edge('A', 'B', weight=-math.log(2), depth=0)
@@ -152,9 +153,15 @@ class TestBellmannx(TestCase):
 
     def test_ratio(self):
         G = nx.DiGraph()
-        G.add_edge('A', 'B', weight=-0.69)
-        G.add_edge('B', 'C', weight=-1.1)
-        G.add_edge('C', 'A', weight=1.39)
+        G.add_edge('A', 'B', weight=-math.log(2))
+        G.add_edge('B', 'C', weight=-math.log(3))
+        G.add_edge('C', 'A', weight=-math.log(1/4))
         paths = bellman_ford(G, 'A', unique_paths=True, loop_from_source=False)
+        path_count = 0
+
         for path in paths:
-            self.assertEquals(calculate_profit_ratio_for_path(G, path), 1.5)
+            path_count += 1
+            self.assertAlmostEqual(calculate_profit_ratio_for_path(G, path), 1.5)
+
+        # assert that unique_paths allows for only one path
+        self.assertEqual(path_count, 1)
