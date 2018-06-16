@@ -134,8 +134,10 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     except TypeError:
         return
 
-    # prevent math error when Bittrex (GEO/BTC) or other API gives 0 as ticker price
-    if ticker_ask == 0 or ticker_bid == 0:
+    # Exchanges give asks and bids as either 0 or None when they do not exist.
+    # todo: should we account for exchanges upon which an ask exists but a bid does not (and vice versa)? Would this
+    # cause bugs?
+    if ticker_ask == 0 or ticker_bid == 0 or ticker_ask is None or ticker_bid is None:
         return
     try:
         base_currency, quote_currency = market_name.split('/')
