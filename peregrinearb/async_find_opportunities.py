@@ -1,5 +1,5 @@
 import ccxt.async as ccxt
-from .utils.general import get_exchanges_for_market
+from .async_build_markets import get_exchanges_for_market
 import asyncio
 
 

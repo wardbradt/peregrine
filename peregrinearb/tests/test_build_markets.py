@@ -19,10 +19,10 @@ class TestCollectionBuilders(TestCase):
     def test_errors_raised(self):
         with self.assertRaises(ValueError):
             # note the misspelling of "countries" as "contries"
-            build_specific_collections(contries='US')
+            build_specific_collections(contries=['US'])
 
     def test_whitelist_blacklist(self):
-        us_exchanges = build_specific_collections(countries='US')
+        us_exchanges = build_specific_collections(countries=['US'])
         confirmed_us_exchanges = []
         for exchange_list in us_exchanges.values():
             for exchange_name in exchange_list:
@@ -33,7 +33,7 @@ class TestCollectionBuilders(TestCase):
                 self.assertIn('US', exchange.countries)
                 confirmed_us_exchanges.append(exchange_name)
 
-        not_us_exchanges = build_specific_collections(countries='US', blacklist=True)
+        not_us_exchanges = build_specific_collections(countries=['US'], blacklist=True)
         confirmed_not_us_exchanges = []
         for exchange_list in not_us_exchanges.values():
             for exchange_name in exchange_list:

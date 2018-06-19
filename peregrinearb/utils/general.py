@@ -1,40 +1,11 @@
-import json
 import math
 import networkx as nx
-from ccxt import async as ccxt
 
 
 class ExchangeNotInCollectionsError(Exception):
     def __init__(self, market_ticker):
         super(ExchangeNotInCollectionsError, self).__init__("{} is either an invalid exchange or has a broken API."
                                                             .format(market_ticker))
-
-
-async def _get_exchange(exchange_name: str):
-    exchange = getattr(ccxt, exchange_name)()
-    await exchange.load_markets()
-    await exchange.close()
-    return exchange
-
-
-def get_exchanges_for_market(market_ticker):
-    """
-    Returns the list of exchanges on which a market is traded
-    """
-    # todo: fix paths to collections
-    with open('./../peregrinearb/collections/collections.json') as f:
-        collections = json.load(f)
-    for market_name, exchanges in collections.items():
-        if market_name == market_ticker:
-            return exchanges
-
-    with open('./../peregrinearb//collections/singularly_available_markets.json') as f:
-        singularly_available_markets = json.load(f)
-    for market_name, exchange in singularly_available_markets:
-        if market_name == market_ticker:
-            return [exchange]
-
-    raise ExchangeNotInCollectionsError(market_ticker)
 
 
 def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, starting_amount=100):
