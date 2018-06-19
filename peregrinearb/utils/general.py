@@ -7,7 +7,7 @@ class ExchangeNotInCollectionsError(Exception):
         super(ExchangeNotInCollectionsError, self).__init__("{} is either an invalid exchange or has a broken API."
                                                             .format(market_ticker))
 
-
+        
 def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, starting_amount=100):
     if not path:
         return
