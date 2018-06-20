@@ -44,7 +44,7 @@ If you want to find opportunities on the exchanges of only a certain country<sup
 ```python
 from peregrinearb import build_specific_collections, get_opportunity_for_market
 
-us_eth_btc_exchanges = build_specific_collections({'countries': 'US' })
+us_eth_btc_exchanges = build_specific_collections('countries'=['US'])
 opportunity = get_opportunity_for_market("ETH/BTC", us_eth_btc_exchanges["ETH/BTC"])
 print(opportunity)
 ```
