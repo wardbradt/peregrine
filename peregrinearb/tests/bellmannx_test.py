@@ -77,6 +77,9 @@ class TestBellmanFordMultiGraph(TestCase):
 class TestBellmannx(TestCase):
 
     def test_ensure_profit_yields_profit(self):
+        """
+        Does not work, as this parameter (ensure_profit) was deprecated
+        """
         graph = nx.DiGraph()
         graph.add_edge(0, 1, weight=4)
         graph.add_edge(1, 0, weight=3)
@@ -98,7 +101,7 @@ class TestBellmannx(TestCase):
             G.add_edge('A', 'B', weight=-math.log(2), depth=0)
             G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
             # there should be weight of 6 after going through A->B->C.
-            G.add_edge('C', 'A', weight=-math.log(1/8), depth=-math.log(i))
+            G.add_edge('C', 'A', weight=-math.log(1/4), depth=-math.log(i))
             finder = NegativeWeightFinder(G, depth=True)
             paths = finder.bellman_ford('A', loop_from_source=False, unique_paths=True)
 

@@ -51,10 +51,7 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
 
     graph = nx.DiGraph()
 
-    try:
-        tickers = await exchange.fetch_tickers()
-    except ccxt.errors.NotSupported:
-        tickers = {exchange: None for exchange in ccxt.exchanges}
+    tickers = await exchange.fetch_tickers()
 
     tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph,
                                          log=True, fee=fee, suppress=suppress, ticker=ticker, depth=depth)
@@ -90,6 +87,7 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
     tasks = [_add_weighted_edge_to_graph(exchange, edge[2]['market_name'], result, log, fee=fee, suppress=suppress)
              for edge in graph.edges(data=True)]
     await asyncio.wait(tasks)
+    await exchange.close()
 
     return result
 
@@ -148,9 +146,9 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     if log:
         if depth:
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
-                           depth=bid_volume)
+                           depth=-math.log(bid_volume))
             graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
-                           depth=ask_volume)
+                           depth=-math.log(ask_volume))
         else:
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid))
             graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask))

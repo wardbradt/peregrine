@@ -1,6 +1,8 @@
 import math
 import networkx as nx
 from .utils import last_index_in_list, PrioritySet, next_to_each_other
+import asyncio
+from .utils import load_exchange_graph
 
 
 class SeenNodeError(Exception):
@@ -112,7 +114,7 @@ class NegativeWeightFinder:
                 # if self.depth, must check that this loop is profitable accounting for depth.
                 # todo: this could be optimized to check in _retrace_negative_loop
                 else:
-                    if calculate_profit_ratio_for_path(self.graph, path, depth=False,
+                    if calculate_profit_ratio_for_path(self.graph, path, depth=True,
                                                        starting_amount=self.starting_amount) > self.starting_amount:
                         yield path
 
@@ -129,7 +131,9 @@ class NegativeWeightFinder:
         if self.distance_from[edge[1]] + edge[2]['weight'] < self.distance_from[edge[0]]:
             self.distance_from[edge[0]] = self.distance_from[edge[1]] + edge[2]['weight']
             if self.depth:
-                self.depth_nodes_from[edge[0]] = max(self.distance_from[edge[1]], edge[2]['depth']) + edge[2]['weight']
+                self.depth_nodes_from[edge[0]] = \
+                    max(self.distance_from[edge[1]], edge[2]['depth']) +\
+                    edge[2]['weight']
 
         self.predecessor_from[edge[0]].add(edge[1],
                                            self.distance_from[edge[1]] + edge[2]['weight'])
@@ -344,16 +348,24 @@ def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, uni
                                                                             unique_paths)
 
 
+def find_opportunities_on_exchange(exchange_name, source, loop_from_source=False, ensure_profit=False,
+                                   unique_paths=False, depth=False, starting_amount=1):
+    """
+    A high level function to find intraexchange arbitrage opportunities on a specified exchange.
+    """
+    graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph(exchange_name))
+    return bellman_ford(graph, source, loop_from_source, ensure_profit, unique_paths, depth, starting_amount)
+
+
 def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1):
     ratio = starting_amount
-    for i in range(len(path)):
-        if i + 1 < len(path):
-            start = path[i]
-            end = path[i + 1]
-            if depth:
-                depth = min(ratio, math.exp(-graph[start][end]['depth']))
-                ratio = math.exp(-graph[start][end]['weight']) * depth
-            else:
-                ratio *= math.exp(-graph[start][end]['weight'])
+    for i in range(len(path) - 1):
+        start = path[i]
+        end = path[i + 1]
+        if depth:
+            depth = min(ratio, math.exp(-graph[start][end]['depth']))
+            ratio = math.exp(-graph[start][end]['weight']) * depth
+        else:
+            ratio *= math.exp(-graph[start][end]['weight'])
 
     return ratio / starting_amount
