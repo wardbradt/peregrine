@@ -10,5 +10,5 @@ setup(
     author_email='wardbradt5@gmail.com',
     packages=['peregrinearb', 'peregrinearb.utils', 'peregrinearb.tests'],
     license='MIT',
-    url='https://github.com/wardbradt/peregrinearb',
+    url='https://github.com/Stakedllc/peregrine/',
 )
