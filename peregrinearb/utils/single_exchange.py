@@ -95,6 +95,7 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
 async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True, fee=0,
                                       suppress=None, ticker=None, depth=False):
     """
+    todo: add global variable to bid_volume/ ask_volume to see if all tickers (for a given exchange) have value == None
     Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
     edges).
     :param exchange: A ccxt Exchange object

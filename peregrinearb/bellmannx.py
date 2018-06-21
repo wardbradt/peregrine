@@ -34,6 +34,20 @@ class NegativeWeightFinder:
 
         self.seen_nodes = set()
 
+    def reset_all_but_graph(self):
+        self.predecessor_to = {}
+        self.distance_to = {}
+        self.predecessor_from = {}
+        self.distance_from = {}
+
+        if self.depth:
+            del self.depth
+            del self.starting_amount
+            del self.depth_nodes_to
+            del self.depth_nodes_from
+
+        self.seen_nodes = set()
+
     def _set_basic_fields(self, node):
         # Initialize all distance_to values to infinity and all predecessor_to values to None
         self.distance_to[node] = float('Inf')
