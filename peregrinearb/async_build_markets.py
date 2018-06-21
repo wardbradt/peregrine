@@ -3,6 +3,7 @@ import asyncio
 import json
 import networkx as nx
 from .utils.general import ExchangeNotInCollectionsError
+from .settings import COLLECTIONS_DIR
 
 
 class CollectionBuilder:
@@ -26,10 +27,10 @@ class CollectionBuilder:
         await asyncio.wait(tasks)
 
         if write:
-            with open('./collections/collections.json', 'w') as outfile:
+            with open(COLLECTIONS_DIR + 'collections.json', 'w') as outfile:
                 json.dump(self.collections, outfile)
 
-            with open('./collections/singularly_available_markets.json', 'w') as outfile:
+            with open(COLLECTIONS_DIR + 'singularly_available_markets.json', 'w') as outfile:
                 json.dump(self.singularly_available_markets, outfile)
 
         return self.collections
@@ -190,7 +191,7 @@ class ExchangeMultiGraphBuilder:
         asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
 
         if write:
-            with open('collections/graph.json', 'w') as outfile:
+            with open(COLLECTIONS_DIR + 'graph.json', 'w') as outfile:
                 json.dump(self.graph, outfile)
 
         return self.graph
@@ -271,16 +272,13 @@ def get_exchanges_for_market(market_ticker):
     """
     Returns the list of exchanges on which a market is traded
     """
-    try:
-        with open('./collections/collections.json') as f:
-            collections = json.load(f)
-        for market_name, exchanges in collections.items():
-            if market_name == market_ticker:
-                return exchanges
-    except FileNotFoundError:
-        return build_specific_collections(symbols=[market_ticker])
+    with open(COLLECTIONS_DIR + 'collections.json') as f:
+        collections = json.load(f)
+    for market_name, exchanges in collections.items():
+        if market_name == market_ticker:
+            return exchanges
 
-    with open('./collections/singularly_available_markets.json') as f:
+    with open(COLLECTIONS_DIR + 'singularly_available_markets.json') as f:
         singularly_available_markets = json.load(f)
     for market_name, exchange in singularly_available_markets:
         if market_name == market_ticker:
