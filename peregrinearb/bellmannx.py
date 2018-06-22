@@ -238,7 +238,7 @@ class NegativeWeightFinder:
 
 class NegativeWeightDepthFinder(NegativeWeightFinder):
 
-    def __init__(self, graph: nx.Graph, starting_amount=float('Inf')):
+    def __init__(self, graph: nx.Graph):
         """
         This variation of NegativeWeightFinder finds the most negative weight cycle including a source node in a
         graph. This varies from setting depth=True in NegativeWeightFinder in the following ways:
@@ -256,22 +256,15 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         almost constant conditionals to check if depth would be accounted for. This is why rather than simply make
         depth a parameter in all of NegativeWeightFinder's methods, there is this separate class.
         :param graph: A graph with 'weight' and 'depth' attributes on all edges.
-        :param starting_amount: The amount of source currency which can be traded.
         """
         super(NegativeWeightDepthFinder, self).__init__(graph)
-        self.starting_amount = starting_amount
 
     def initialize(self, source):
-        """
-        This is different from the superclass's initialize method because self.distance_to[source] is
-        self.starting_amount.
-        """
         for node in self.graph:
             self._set_basic_fields(node)
 
-        # For NWF, self.distance_to[source] is set to 0 because 0 == -log(1), which is assumed to be the starting
-        # amount.
-        self.distance_to[source] = -math.log(self.starting_amount)
+        # The distance from any node to (itself) == 0
+        self.distance_to[source] = 0
         self.distance_from[source] = 0
 
     def relax(self, edge):

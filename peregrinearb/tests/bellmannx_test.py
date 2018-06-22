@@ -104,16 +104,32 @@ class TestBellmannx(TestCase):
         """
         Tests NegativeWeightDepthFinder
         """
-        total = 0
+        # Tests that a negative loop starting at A cannot exist because the minimum weight of a cycle from and to A
+        # is approximately 0.154, which is the negative log of 6/7.
+        for i in range(1, 4):
+            # todo: must we reinitialize G?
+            G = nx.DiGraph()
+            G.add_edge('A', 'B', weight=-math.log(2), depth=0)
+            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
+            G.add_edge('C', 'A', weight=-math.log(2 / 7), depth=-math.log(i))
 
+            paths = NegativeWeightDepthFinder(G).bellman_ford('A')
+            total = 0
+            for path in paths:
+                total += 1
+
+            # asserts that there were no paths with negative weight given depths between -math.log(1) and -math.log(3)
+            # for the edge C->A
+            self.assertEqual(total, 0)
+
+        total = 0
         for i in range(4, 7):
             G = nx.DiGraph()
             G.add_edge('A', 'B', weight=-math.log(2), depth=0)
             G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
             G.add_edge('C', 'A', weight=-math.log(2 / 7), depth=-math.log(i))
 
-            finder = NegativeWeightDepthFinder(G)
-            paths = finder.bellman_ford('A')
+            paths = NegativeWeightDepthFinder(G).bellman_ford('A')
             for path in paths:
                 # asserts that each of the 3 paths has a profit ratio of 8/7, 10/7, and 12/7, respectively.
                 # Because of Python float precision, the last digit of either value is sometimes not equal to the other.
