@@ -93,28 +93,12 @@ class TestBellmannx(TestCase):
                 weight += graph[path[i]][path[i + 1]]['weight']
             self.assertLess(weight, 0)
 
-    def test_depth(self):
-        # currently does not work as bellman_ford's depth feature is broken/ in development.
-        for i in range(1, 4):
-            G = nx.DiGraph()
-            # for the depth of A->B, 0 == -math.log(1). also note weight of A->B == depth B->C.
-            G.add_edge('A', 'B', weight=-math.log(2), depth=0)
-            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
-            # there should be weight of 6 after going through A->B->C.
-            G.add_edge('C', 'A', weight=-math.log(1/4), depth=-math.log(i))
-            finder = NegativeWeightFinder(G, depth=True)
-            paths = finder.bellman_ford('A', loop_from_source=False, unique_paths=True)
-
-            total = 0
-            for path in paths:
-                self.assertLessEqual(1, calculate_profit_ratio_for_path(G, path, depth=True, starting_amount=1))
-
         for i in range(6, 8):
             G = nx.DiGraph()
             G.add_edge('A', 'B', weight=-math.log(2), depth=0)
             G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
             G.add_edge('C', 'A', weight=-math.log(1 / 4), depth=-math.log(i))
-            paths = bellman_ford(G, 'A', unique_paths=True, depth=True)
+            paths = bellman_ford(G, 'A', unique_paths=True)
 
     def test_true_depth(self):
         """
