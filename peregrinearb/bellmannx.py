@@ -3,6 +3,7 @@ import networkx as nx
 from .utils import last_index_in_list, PrioritySet, next_to_each_other
 import asyncio
 from .utils import load_exchange_graph
+import numpy as np
 
 
 class SeenNodeError(Exception):
@@ -252,19 +253,30 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         2. NegativeWeightFinder's version can detect any negative cycle in the given graph (regardless of whether
         or not they include the source). This version is only able to detect negative cycles which start at the source.
 
+        In NegativeWeightDepthFinder, self.distance_to[x] stores the minimum amount of weight (as a negative log)
+        available at x. So, e^(-self.distance_to[x]) is the maximum amount of currency available at x.
+
         The algorithm when accounting for depth is significantly different at every step that it would necessitate
         almost constant conditionals to check if depth would be accounted for. This is why rather than simply make
         depth a parameter in all of NegativeWeightFinder's methods, there is this separate class.
         :param graph: A graph with 'weight' and 'depth' attributes on all edges.
         """
         super(NegativeWeightDepthFinder, self).__init__(graph)
+        # np.finfo(float).eps is the smallest non-zero positive float in Python, equivalent to 2.22044604925e-16
+        # Change this number to find opportunities which start with a minimum amount of source.
+        self.starting_amount = np.finfo(float).eps
 
     def initialize(self, source):
+        """
+        This is different from the superclass's initialize method because self.distance_to[source] is
+        self.starting_amount.
+        """
         for node in self.graph:
             self._set_basic_fields(node)
 
-        # The distance from any node to (itself) == 0
-        self.distance_to[source] = 0
+        # For NWF, self.distance_to[source] is set to 0 because 0 == -log(1), which is assumed to be the starting
+        # amount. In NWDF, is set to self.starting_amount.
+        self.distance_to[source] = -math.log(self.starting_amount)
         self.distance_from[source] = 0
 
     def relax(self, edge):
@@ -306,11 +318,44 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             raise ValueError('keyword arguments for _check_final_condition should contain source. This error'
                              'should never show.')
 
-        if self.distance_to[kwargs['source']] < 0:
+        # if source_predecessor[]
+
+        if self.distance_to[kwargs['source']] < -math.log(self.starting_amount):
             yield self._retrace_negative_loop(kwargs['source'],
                                               loop_from_source=False,
-                                              ensure_profit=False,
-                                              unique_paths=True)
+                                              ensure_profit=False)
+
+    def _retrace_negative_loop(self, start, loop_from_source=False, source='', ensure_profit=False, unique_paths=False):
+        """
+        Unlike NegativeWeightFinder's _retrace_negative_loop, this returns a dict structured as
+        {'loop': arbitrage_loop, 'minimum' : minimum}, where arbitrage_loop is a negatively-weighted cycle and minimum
+        is the least weight that can be started with at source.
+        """
+        # todo: raise warning if source != ''
+        if loop_from_source or ensure_profit:
+            raise ValueError('NegativeWeightDepthFinder does not support loop_from_source or ensure_profit. If this '
+                             'error is showing, one of these parameters was set to true when _retrace_negative_loop '
+                             'was called.')
+
+        arbitrage_loop = [start]
+        prior_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
+        # the minimum weight which can be transferred without being limited by edge depths
+        minimum = self.graph[prior_node][arbitrage_loop[0]]['depth']
+        arbitrage_loop.insert(0, prior_node)
+        while True:
+            prior_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
+            edge_weight = self.graph[prior_node][arbitrage_loop[0]]['weight']
+            edge_depth = self.graph[prior_node][arbitrage_loop[0]]['depth']
+            if edge_weight + edge_depth < minimum:
+                minimum = max(minimum - edge_weight, edge_depth)
+
+            elif edge_weight + edge_depth > minimum:
+                minimum = edge_depth
+
+            arbitrage_loop.insert(0, prior_node)
+
+            if prior_node == arbitrage_loop[-1]:
+                return {'loop': arbitrage_loop, 'minimum': minimum}
 
 
 def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, unique_paths=False):
@@ -322,7 +367,7 @@ def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, uni
     starting_amount.
     """
     return NegativeWeightFinder(graph).bellman_ford(source, loop_from_source, ensure_profit,
-                                                                            unique_paths)
+                                                    unique_paths)
 
 
 def find_opportunities_on_exchange(exchange_name, source, loop_from_source=False, ensure_profit=False,

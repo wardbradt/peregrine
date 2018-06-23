@@ -106,37 +106,20 @@ class TestBellmannx(TestCase):
         """
         # Tests that a negative loop starting at A cannot exist because the minimum weight of a cycle from and to A
         # is approximately 0.154, which is the negative log of 6/7.
-        for i in range(1, 4):
-            # todo: must we reinitialize G?
-            G = nx.DiGraph()
-            G.add_edge('A', 'B', weight=-math.log(2), depth=0)
-            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
-            G.add_edge('C', 'A', weight=-math.log(2 / 7), depth=-math.log(i))
-
-            paths = NegativeWeightDepthFinder(G).bellman_ford('A')
-            total = 0
-            for path in paths:
-                total += 1
-
-            # asserts that there were no paths with negative weight given depths between -math.log(1) and -math.log(3)
-            # for the edge C->A
-            self.assertEqual(total, 0)
-
         total = 0
-        for i in range(4, 7):
-            G = nx.DiGraph()
+        G = nx.DiGraph()
+        for i in range(1, 7):
             G.add_edge('A', 'B', weight=-math.log(2), depth=0)
             G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
             G.add_edge('C', 'A', weight=-math.log(2 / 7), depth=-math.log(i))
 
-            paths = NegativeWeightDepthFinder(G).bellman_ford('A')
+            finder = NegativeWeightDepthFinder(G)
+            paths = finder.bellman_ford('A')
             for path in paths:
-                # asserts that each of the 3 paths has a profit ratio of 8/7, 10/7, and 12/7, respectively.
-                # Because of Python float precision, the last digit of either value is sometimes not equal to the other.
-                self.assertAlmostEqual(calculate_profit_ratio_for_path(G, path, depth=True), 8 / 7 + (i - 4) * (2/7))
+                self.assertAlmostEqual(calculate_profit_ratio_for_path(G, path['loop'], depth=True),
+                                       math.exp(-path['minimum']) * 12 / 7)
                 total += 1
-        # asserts that there is a negatively-weighted path when the depth for the edge C->A < -math.log(4)
-        self.assertEqual(total, 3)
+        self.assertEqual(total, 6)
 
     def test_ratio(self):
         G = nx.DiGraph()
