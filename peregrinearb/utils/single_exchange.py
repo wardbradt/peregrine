@@ -3,6 +3,7 @@ import math
 import networkx as nx
 from ccxt import async as ccxt
 import warnings
+import time
 
 
 def create_exchange_graph(exchange: ccxt.Exchange):
@@ -51,6 +52,8 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
 
     graph = nx.DiGraph()
 
+    # todo: get exchange's server time?
+    graph.graph['timestamp'] = time.time()
     tickers = await exchange.fetch_tickers()
 
     tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph,
@@ -64,7 +67,8 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     return graph
 
 
-async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=True, fees=False, suppress=None) -> nx.DiGraph:
+async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=True, fees=False, suppress=None,
+                                  depth=False) -> nx.DiGraph:
     """
     Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
     edges)
@@ -84,7 +88,8 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
                               "Values will be calculated using a 0.2% maker fee.".format(exchange))
             fee = 0.002
 
-    tasks = [_add_weighted_edge_to_graph(exchange, edge[2]['market_name'], result, log, fee=fee, suppress=suppress)
+    tasks = [_add_weighted_edge_to_graph(exchange, edge[2]['market_name'], result, log, fee=fee, suppress=suppress,
+                                         depth=depth)
              for edge in graph.edges(data=True)]
     await asyncio.wait(tasks)
     await exchange.close()

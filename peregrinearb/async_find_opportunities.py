@@ -21,7 +21,7 @@ class OpportunityFinder:
         self.exchange_list = exchanges
         self.market_name = market_name
         self.highest_bid = {'exchange': None, 'price': -1}
-        self.lowest_ask = {'exchange': None, 'price': 9999999}
+        self.lowest_ask = {'exchange': None, 'price': float('Inf')}
 
     async def _test_bid_and_ask(self, exchange):
         """
@@ -42,12 +42,8 @@ class OpportunityFinder:
 
         await exchange.close()
 
-        try:
-            ask = ticker['ask']
-            bid = ticker['bid']
-        # ask and bid == None if this market is non existent.
-        except TypeError:
-            return
+        ask = ticker['ask']
+        bid = ticker['bid']
 
         if self.highest_bid['price'] < bid:
             self.highest_bid['price'] = bid
