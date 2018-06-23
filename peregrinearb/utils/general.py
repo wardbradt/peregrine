@@ -1,5 +1,6 @@
 import math
 import networkx as nx
+import warnings
 
 
 class ExchangeNotInCollectionsError(Exception):
@@ -11,6 +12,13 @@ class ExchangeNotInCollectionsError(Exception):
 def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, starting_amount=100):
     if not path:
         return
+
+    if depth:
+        if starting_amount > math.exp(-path['minimum']):
+            warnings.warn('Parameter starting_amount is greater than maximum possible volume at the source node. Will'
+                          'start with {}'.format(str(math.exp(-path['minimum']))))
+
+            starting_amount = math.exp(-path['minimum'])
 
     print("Starting with {} in {}".format(starting_amount, path[0]))
 

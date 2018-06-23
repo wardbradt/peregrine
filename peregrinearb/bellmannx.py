@@ -371,12 +371,16 @@ def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, uni
 
 
 def find_opportunities_on_exchange(exchange_name, source, loop_from_source=False, ensure_profit=False,
-                                   unique_paths=False, depth=False, starting_amount=1):
+                                   unique_paths=False, depth=False):
     """
     A high level function to find intraexchange arbitrage opportunities on a specified exchange.
     """
-    graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph(exchange_name))
-    return bellman_ford(graph, source, loop_from_source, ensure_profit, unique_paths, depth, starting_amount)
+    graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph(exchange_name, depth=depth))
+    if depth:
+        finder = NegativeWeightDepthFinder(graph)
+        return finder.bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
+    
+    return bellman_ford(graph, source, loop_from_source, ensure_profit, unique_paths)
 
 
 def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1):
