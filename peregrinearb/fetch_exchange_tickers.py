@@ -1,8 +1,5 @@
 import ccxt.async as ccxt
 import asyncio
-import networkx as nx
-import time
-
 
 class TickerFetcher:
 
@@ -30,7 +27,3 @@ class TickerFetcher:
 async def fetch_exchange_tickers(exchange_names, name=True):
     fetcher = TickerFetcher(exchange_names, name=name)
     return await fetcher.fetch_exchange_tickers()
-
-b = ccxt.gdax()
-print(asyncio.get_event_loop().run_until_complete(b.fetch_tickers()))
-asyncio.get_event_loop().run_until_complete(b.close())
