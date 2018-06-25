@@ -25,7 +25,7 @@ def create_exchange_graph(exchange: ccxt.Exchange):
     return graph
 
 
-async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, depth=False) -> nx.DiGraph:
+async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, depth=False, tickers=None) -> nx.DiGraph:
     """
     Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
     edges). If depth, also adds an attribute 'depth' to each edge which represents the current volume of orders
@@ -54,7 +54,8 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
 
     # todo: get exchange's server time?
     graph.graph['timestamp'] = datetime.datetime.now()
-    tickers = await exchange.fetch_tickers()
+    if tickers is None:
+        tickers = await exchange.fetch_tickers()
 
     tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph,
                                          log=True, fee=fee, suppress=suppress, ticker=ticker, depth=depth)

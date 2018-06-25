@@ -2,12 +2,12 @@ import asyncio
 import aiohttp
 
 
-class TickerFetcher:
+class TickerGatherer:
 
     def __init__(self, endpoint, markets=None):
         if markets is None:
-            raise ValueError('markets cannot be none for class TickerFetcher. It is possible that a subclass of '
-                             'TickerFetcher did not correctly implement the inheritance.')
+            raise ValueError('markets cannot be none for class TickerGatherer. It is possible that a subclass of '
+                             'TickerGatherer did not correctly implement the inheritance.')
 
         self.endpoint = endpoint
         self.markets = markets
@@ -24,5 +24,5 @@ class TickerFetcher:
                 self.tickers[market] = await resp.json()
 
     def format_tickers(self):
-        raise ValueError('format_tickers not implemented in class TickerFetcher. To use, inherit from TickerFetcher and'
+        raise ValueError('format_tickers not implemented in class TickerGatherer. To use, inherit from TickerGatherer and'
                          'override this function.')
