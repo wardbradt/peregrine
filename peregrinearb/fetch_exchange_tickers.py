@@ -1,7 +1,8 @@
 import ccxt.async as ccxt
 import asyncio
 
-class TickerFetcher:
+
+class BulkTickerFetcher:
 
     def __init__(self, exchange_names, name=True):
         """
@@ -25,5 +26,5 @@ class TickerFetcher:
 
 
 async def fetch_exchange_tickers(exchange_names, name=True):
-    fetcher = TickerFetcher(exchange_names, name=name)
+    fetcher = BulkTickerFetcher(exchange_names, name=name)
     return await fetcher.fetch_exchange_tickers()
