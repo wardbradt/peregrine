@@ -16,7 +16,8 @@ class OpportunityFinder:
                 raise ValueError("if parameter name == False, parameter exchanges cannot be None.")
             exchanges = get_exchanges_for_market(market_name)
 
-        exchanges = [getattr(ccxt, exchange_id)() for exchange_id in exchanges]
+        if name:
+            exchanges = [getattr(ccxt, exchange_id)() for exchange_id in exchanges]
 
         self.exchange_list = exchanges
         self.market_name = market_name
@@ -32,13 +33,13 @@ class OpportunityFinder:
         if not isinstance(exchange, ccxt.Exchange):
             raise ValueError("exchange is not a ccxt Exchange instance.")
 
-        try:
-            ticker = await exchange.fetch_ticker(self.market_name)
+        # try:
+        ticker = await exchange.fetch_ticker(self.market_name)
         # A KeyError or ExchangeError occurs when the exchange does not have a market named self.market_name.
         # Any ccxt BaseError is because of ccxt, not this code.
-        except (KeyError, ccxt.ExchangeError, ccxt.BaseError):
-            await exchange.close()
-            return
+        # except (KeyError, ccxt.ExchangeError, ccxt.BaseError):
+        #     await exchange.close()
+        #     return
 
         await exchange.close()
 
@@ -57,7 +58,8 @@ class OpportunityFinder:
         await asyncio.wait(tasks)
 
         return {'highest_bid': self.highest_bid,
-                'lowest_ask': self.lowest_ask}
+                'lowest_ask': self.lowest_ask,
+                'ticker': self.market_name}
 
 
 async def get_opportunity_for_market(ticker, exchanges=None, name=True):

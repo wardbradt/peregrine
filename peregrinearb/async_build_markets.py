@@ -10,7 +10,8 @@ class CollectionBuilder:
 
     def __init__(self, exchanges=None):
         if exchanges is None:
-            self.exchanges = ccxt.exchanges
+            exchanges = ccxt.exchanges
+        self.exchanges = exchanges
         # keys are market names and values are an array of names of exchanges which support that market
         self.collections = {}
         # stores markets which are only available on one exchange: keys are markets names and values are exchange names
@@ -49,8 +50,9 @@ class CollectionBuilder:
 
         return self.collections
 
-    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
-        exchange = getattr(ccxt, exchange_name)()
+    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False, name=True):
+        if name:
+            exchange = getattr(ccxt, exchange_name)()
         if ccxt_errors:
             await exchange.load_markets()
             await exchange.close()
@@ -95,8 +97,9 @@ class SpecificCollectionBuilder(CollectionBuilder):
         self.rules = kwargs
         self.blacklist = blacklist
 
-    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
-        exchange = getattr(ccxt, exchange_name)()
+    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False, name=True):
+        if name:
+            exchange = getattr(ccxt, exchange_name)()
         if ccxt_errors:
             await exchange.load_markets()
             await exchange.close()
@@ -257,15 +260,12 @@ def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, 
     return builder.build_all_collections(write, ccxt_errors)
 
 
-def build_all_collections(write=True, ccxt_errors=False):
+def build_all_collections(write=True, ccxt_errors=False, exchanges=None):
     """
     Be careful when using this. build_collections is typically preferred over this method because build_collections only
     accounts for exchanges which have a private API (and thus can be traded on).
-    :param write:
-    :param ccxt_errors:
-    :return:
     """
-    builder = CollectionBuilder()
+    builder = CollectionBuilder(exchanges=exchanges)
     return builder.build_all_collections(write=write, ccxt_errors=ccxt_errors)
 
 
