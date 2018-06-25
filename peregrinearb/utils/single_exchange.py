@@ -53,6 +53,7 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     graph = nx.DiGraph()
 
     # todo: get exchange's server time?
+    graph.graph['exchange_name'] = exchange.id
     graph.graph['timestamp'] = datetime.datetime.now()
     if tickers is None:
         tickers = await exchange.fetch_tickers()

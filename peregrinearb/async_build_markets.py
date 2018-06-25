@@ -2,14 +2,15 @@ import ccxt.async as ccxt
 import asyncio
 import json
 import networkx as nx
-from .utils.general import ExchangeNotInCollectionsError
+from .utils import ExchangeNotInCollectionsError
 from .settings import COLLECTIONS_DIR
 
 
 class CollectionBuilder:
 
-    def __init__(self):
-        self.exchanges = ccxt.exchanges
+    def __init__(self, exchanges=None):
+        if exchanges is None:
+            self.exchanges = ccxt.exchanges
         # keys are market names and values are an array of names of exchanges which support that market
         self.collections = {}
         # stores markets which are only available on one exchange: keys are markets names and values are exchange names
@@ -246,7 +247,7 @@ def build_arbitrage_graph_for_exchanges(exchanges: list, k_core=2):
     return nx.k_core(build_multi_graph_for_exchanges(exchanges), k_core)
 
 
-def build_collections(blacklist=False, write=True, ccxt_errors=False):
+def build_collections(blacklist=False, write=True, ccxt_errors=True):
     return build_specific_collections(blacklist, write,
                                       ccxt_errors, has={'fetchOrderBook': True})
 
