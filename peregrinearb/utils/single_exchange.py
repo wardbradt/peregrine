@@ -3,7 +3,7 @@ import math
 import networkx as nx
 from ccxt import async as ccxt
 import warnings
-import time
+import datetime
 
 
 def create_exchange_graph(exchange: ccxt.Exchange):
@@ -53,7 +53,7 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     graph = nx.DiGraph()
 
     # todo: get exchange's server time?
-    graph.graph['timestamp'] = time.time()
+    graph.graph['timestamp'] = datetime.datetime.now()
     tickers = await exchange.fetch_tickers()
 
     tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph,
