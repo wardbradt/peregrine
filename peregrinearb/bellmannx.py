@@ -4,15 +4,21 @@ from .utils import last_index_in_list, PrioritySet, next_to_each_other
 import asyncio
 from .utils import load_exchange_graph
 import numpy as np
+import logging
 
 
 class SeenNodeError(Exception):
     pass
 
 
+file_logger = logging.getLogger(__name__)
+
+
 class NegativeWeightFinder:
 
     def __init__(self, graph: nx.Graph):
+        self.logger = logging.getLogger(__name__)
+        self.logger.info('Initializing NegativeWeightFinder for {}'.format(graph.graph['exchange_name']))
         self.graph = graph
         self.predecessor_to = {}
         # the maximum weight which can be transferred from source to each node
@@ -22,6 +28,7 @@ class NegativeWeightFinder:
         self.distance_from = {}
 
         self.seen_nodes = set()
+        self.logger.info('Initialized NegativeWeightFinder for {}'.format(graph.graph['exchange_name']))
 
     def reset_all_but_graph(self):
         self.predecessor_to = {}
@@ -32,6 +39,7 @@ class NegativeWeightFinder:
         self.seen_nodes = set()
 
     def _set_basic_fields(self, node):
+        # todo: change predecessor_to to a dict and get rid of loop_from_source
         # Initialize all distance_to values to infinity and all predecessor_to values to None
         self.distance_to[node] = float('Inf')
         self.predecessor_to[node] = PrioritySet()
@@ -62,18 +70,25 @@ class NegativeWeightFinder:
         (without too much weight on the optimization, more so on simply completing it).
         :param source: The node in graph from which the values in distance_to and distance_from will be calculated.
         """
+        self.logger.info('Running bellman_ford for exchange {}'.format(self.graph.graph['exchange_name']))
         self.initialize(source)
+
+        self.logger.debug('Relaxing edges')
         # After len(graph) - 1 passes, algorithm is complete.
         for i in range(len(self.graph) - 1):
             # for each node in the graph, test if the distance to each of its siblings is shorter by going from
             # source->base_currency + base_currency->quote_currency
             for edge in self.graph.edges(data=True):
                 self.relax(edge)
+        self.logger.debug('Finished relaxing edges')
 
-        return self._check_final_condition(loop_from_source=loop_from_source,
-                                           source=source,
-                                           ensure_profit=ensure_profit,
-                                           unique_paths=unique_paths)
+        paths = self._check_final_condition(loop_from_source=loop_from_source,
+                                            source=source,
+                                            ensure_profit=ensure_profit,
+                                            unique_paths=unique_paths)
+
+        self.logger.info('Ran bellman_ford for exchange {}'.format(self.graph.graph['exchange_name']))
+        return paths
 
     def _check_final_condition(self, **kwargs):
         """
@@ -104,6 +119,7 @@ class NegativeWeightFinder:
                 yield path
 
     def relax(self, edge):
+        self.logger.debug('Relaxing edge between {} and {}'.format(edge[1], edge[0]))
         if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
             self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
 
@@ -116,6 +132,7 @@ class NegativeWeightFinder:
 
         self.predecessor_from[edge[0]].add(edge[1],
                                            self.distance_from[edge[1]] + edge[2]['weight'])
+        self.logger.debug('Relaxed edge between {} and {}'.format(edge[1], edge[0]))
 
         return True
 
@@ -262,6 +279,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         :param graph: A graph with 'weight' and 'depth' attributes on all edges.
         """
         super(NegativeWeightDepthFinder, self).__init__(graph)
+        self.logger = logging.getLogger(__name__)
         # np.finfo(float).eps is the smallest non-zero positive float in Python, equivalent to 2.22044604925e-16
         # Change this number to find opportunities which start with a minimum amount of source.
         self.starting_amount = np.finfo(float).eps
@@ -271,6 +289,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         This is different from the superclass's initialize method because self.distance_to[source] is
         self.starting_amount.
         """
+        self.logger.info('Initializing fields for NegativeWeightDepthFinder')
         for node in self.graph:
             self._set_basic_fields(node)
 
@@ -278,8 +297,10 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         # amount. In NWDF, is set to self.starting_amount.
         self.distance_to[source] = -math.log(self.starting_amount)
         self.distance_from[source] = 0
+        self.logger.info('Initialized fields for NegativeWeightDepthFinder')
 
     def relax(self, edge):
+        self.logger.debug('Relaxing edge between {} and {}'.format(edge[1], edge[0]))
         # edge[1] is the head node of the edge, edge[0] is the tail node.
         # because edge[2]['depth'] and self.distance_to[edge[0] are negative logs, we want the max, as the min of
         # e raised to the negative of these will return the max of their values.
@@ -291,19 +312,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         # todo: there must be a more efficient way to order neighbors by preceding path weights
         # no matter what, adds this edge to the PrioritySet in predecessor_to
         self.predecessor_to[edge[1]].add(edge[0], edge[2]['weight'] + depth)
-
-        # predecessor_from and distance_from are not used in this class as all paths include source. however, should
-        # they need to be used in the future, this is the code which allows them to be used in the same manner as
-        # distance_to is above.
-        # # note we now compare edge[2]['depth'] to distance_from[edge[1]]; it was previously compared to
-        # # distance_to[edge[0]], edge[2]['depth']
-        # depth = max(self.distance_from[edge[1]], edge[2]['depth'])
-        #
-        # if edge[2]['weight'] + depth < self.distance_from[edge[0]]:
-        #     self.distance_from[edge[0]] = edge[2]['weight'] + depth
-        #
-        # self.predecessor_from[edge[0]].add(edge[1],
-        #                                    self.distance_from[edge[1]] + edge[2]['weight'])
+        self.logger.debug('Relaxed edge between {} and {}'.format(edge[1], edge[0]))
 
         return True
 
@@ -331,6 +340,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         {'loop': arbitrage_loop, 'minimum' : minimum}, where arbitrage_loop is a negatively-weighted cycle and minimum
         is the least weight that can be started with at source.
         """
+        self.logger.debug('Retracing loop')
         # todo: raise warning if source != ''
         if loop_from_source or ensure_profit:
             raise ValueError('NegativeWeightDepthFinder does not support loop_from_source or ensure_profit. If this '
@@ -355,6 +365,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             arbitrage_loop.insert(0, prior_node)
 
             if prior_node == arbitrage_loop[-1]:
+                self.logger.debug('Retraced loop')
                 return {'loop': arbitrage_loop, 'minimum': minimum}
 
 
@@ -379,11 +390,12 @@ def find_opportunities_on_exchange(exchange_name, source, loop_from_source=False
     if depth:
         finder = NegativeWeightDepthFinder(graph)
         return finder.bellman_ford(source, loop_from_source, ensure_profit, unique_paths)
-    
+
     return bellman_ford(graph, source, loop_from_source, ensure_profit, unique_paths)
 
 
 def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1):
+    file_logger.info('Calculating profit ratio for {}'.format(graph.graph['exchange_name']))
     ratio = starting_amount
     for i in range(len(path) - 1):
         start = path[i]
@@ -393,5 +405,7 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1)
             ratio = math.exp(-graph[start][end]['weight']) * depth
         else:
             ratio *= math.exp(-graph[start][end]['weight'])
+
+    file_logger.info('Calculated profit ratio for {}'.format(graph.graph['exchange_name']))
 
     return ratio / starting_amount

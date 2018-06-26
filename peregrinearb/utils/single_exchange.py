@@ -4,6 +4,10 @@ import networkx as nx
 from ccxt import async as ccxt
 import warnings
 import datetime
+import logging
+
+
+file_logger = logging.getLogger(__name__)
 
 
 def create_exchange_graph(exchange: ccxt.Exchange):
@@ -31,41 +35,55 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     edges). If depth, also adds an attribute 'depth' to each edge which represents the current volume of orders
     available at the price represented by the 'weight' attribute of each edge.
     """
+    file_logger.info('Loading exchange graph for {}'.format(exchange.id))
     if suppress is None:
         suppress = ['markets']
     if name:
         exchange = getattr(ccxt, exchange)()
 
+    file_logger.debug('Loading markets for {}'.format(exchange.id))
     await exchange.load_markets()
+    file_logger.debug('Loaded markets for {}'.format(exchange.id))
 
+    file_logger.debug('Checking fees')
     if fees:
         if 'maker' in exchange.fees['trading']:
             # we always take the maker side because arbitrage depends on filling orders
             fee = exchange.fees['trading']['maker']
         else:
             if 'fees' not in suppress:
-                warnings.warn("The fees for {} have not yet been implemented into the library. "
-                              "Values will be calculated using a 0.2% maker fee.".format(exchange))
+                logging.warning("The fees for {} have not yet been implemented into ccxt uniform API."
+                                " Values will be calculated using a 0.2% maker fee.".format(exchange))
             fee = 0.002
     else:
         fee = 0
+    file_logger.debug('Checked fees')
 
+    file_logger.debug('Initializing empty graph with exchange_name and timestamp attributes')
     graph = nx.DiGraph()
 
     # todo: get exchange's server time?
     graph.graph['exchange_name'] = exchange.id
     graph.graph['timestamp'] = datetime.datetime.now()
-    if tickers is None:
-        tickers = await exchange.fetch_tickers()
+    file_logger.debug('Initialized empty graph with exchange_name and timestamp attributes')
 
+    if tickers is None:
+        file_logger.debug('Fetching tickers for {}'.format(exchange.id))
+        tickers = await exchange.fetch_tickers()
+        file_logger.debug('Fetched tickers for {}'.format(exchange.id))
+
+    file_logger.info('Adding data to graph for {}.'.format(exchange.id))
     tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph,
                                          log=True, fee=fee, suppress=suppress, ticker=ticker, depth=depth)
              for market_name, ticker in tickers.items()]
-
     await asyncio.wait(tasks)
+    file_logger.info('Added data to graph for {}.'.format(exchange.id))
 
+    file_logger.debug('Closing connection to {}'.format(exchange.id))
     await exchange.close()
+    file_logger.debug('Closed connection to {}'.format(exchange.id))
 
+    file_logger.info('Loaded exchange graph for {}'.format(exchange.id))
     return graph
 
 
@@ -118,14 +136,15 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     available at the price represented by the 'weight' attribute of each edge.
     :return:
     """
+    file_logger.debug('Adding {} to graph for {}'.format(market_name, exchange.id))
     if ticker is None:
         try:
             ticker = await exchange.fetch_ticker(market_name)
         # any error is solely because of fetch_ticker
         except:
             if 'markets' not in suppress:
-                warning = 'Market {} is unavailable at this time.'.format(market_name)
-                warnings.warn(warning)
+                logging.warning('Market {} is unavailable at this time. It will not be included in the graph'
+                                .format(market_name))
             return
 
     fee_scalar = 1 - fee
@@ -138,6 +157,8 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
             ask_volume = ticker['askVolume']
     # ask and bid == None if this market is non existent.
     except TypeError:
+        logging.warning('Market {} is unavailable at this time. It will not be included in the graph'
+                        .format(market_name))
         return
 
     # Exchanges give asks and bids as either 0 or None when they do not exist.
@@ -150,8 +171,8 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     # if ccxt returns a market in incorrect format (e.g FX_BTC_JPY on BitFlyer)
     except ValueError:
         if 'markets' not in suppress:
-            warning = 'Market {} is unavailable at this time due to incorrect formatting.'.format(market_name)
-            warnings.warn(warning)
+            logging.warning('Market {} is unavailable at this time due to incorrect formatting. It will not be included'
+                            ' in the graph'.format(market_name))
         return
 
     if log:
@@ -170,3 +191,5 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
         else:
             graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid)
             graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask)
+
+    file_logger.debug('Added {} to graph for {}'.format(market_name, exchange.id))

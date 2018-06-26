@@ -11,9 +11,11 @@ class GdaxTickerGatherer(TickerGatherer):
         TickerGatherer.__init__(self, 'https://api.gdax.com/products/{}/book', markets)
 
     def format_tickers(self):
+        self.logger.debug('Formatting tickers')
         result = {}
         for market, ticker in self.tickers:
             result['market'.replace('-', '/')] = {'bid': ticker['bids'][0][0], 'bidVolume': ticker['bids'][0][1],
                                                   'ask': ticker['asks'][0][0], 'askVolume': ticker['asks'][0][1]}
+        self.logger.debug('Formatted tickers')
 
         return result
