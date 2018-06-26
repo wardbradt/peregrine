@@ -9,7 +9,7 @@ file_logger = logging.getLogger(__name__)
 
 class OpportunityFinder:
 
-    def __init__(self, market_name, exchanges=None, name=True):
+    def __init__(self, market_name, exchanges=None, name=True, close=True):
         """
         An object of type OpportunityFinder finds the largest price disparity between exchanges for a given
         cryptocurrency market by finding the exchange with the lowest market ask price and the exchange with the
@@ -19,13 +19,13 @@ class OpportunityFinder:
         self.logger.debug('Initializing OpportunityFinder for {}'.format(market_name))
 
         if exchanges is None:
-            if not name:
-                raise ValueError("if parameter name == False, parameter exchanges cannot be None.")
+            file_logger.warning('Parameter name\'s being false has no effect.')
             exchanges = get_exchanges_for_market(market_name)
 
         if name:
             exchanges = [getattr(ccxt, exchange_id)() for exchange_id in exchanges]
 
+        self.close = close
         self.exchange_list = exchanges
         self.market_name = market_name
         self.highest_bid = {'exchange': None, 'price': -1}
@@ -53,9 +53,10 @@ class OpportunityFinder:
         #     await exchange.close()
         #     return
 
-        self.logger.debug('Closing connection to {}'.format(exchange.id))
-        await exchange.close()
-        self.logger.debug('Closed connection to {}'.format(exchange.id))
+        if self.close:
+            self.logger.debug('Closing connection to {}'.format(exchange.id))
+            await exchange.close()
+            self.logger.debug('Closed connection to {}'.format(exchange.id))
 
         ask = ticker['ask']
         bid = ticker['bid']
@@ -78,9 +79,9 @@ class OpportunityFinder:
                 'ticker': self.market_name}
 
 
-async def get_opportunity_for_market(ticker, exchanges=None, name=True):
+async def get_opportunity_for_market(ticker, exchanges=None, name=True, close=True):
     file_logger.info('Finding lowest ask and highest bid for {}'.format(ticker))
-    finder = OpportunityFinder(ticker, exchanges=exchanges, name=name)
+    finder = OpportunityFinder(ticker, exchanges=exchanges, name=name, close=close)
     result = await finder.find_min_max()
     file_logger.info('Found lowest ask and highest bid for {}'.format(ticker))
     return result

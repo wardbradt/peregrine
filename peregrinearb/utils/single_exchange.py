@@ -140,7 +140,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
         # any error is solely because of fetch_ticker
         except:
             if 'markets' not in suppress:
-                file_logger.warning('Market {} is unavailable at this time. It will not be included in the graph'
+                file_logger.warning('Market {} is unavailable at this time. It will not be included in the graph.'
                                     .format(market_name))
             return
 
@@ -154,15 +154,15 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
             ask_volume = ticker['askVolume']
             if bid_volume is None:
                 file_logger.warning('Market {} on {} is unavailable because its bid volume was given as None. '
-                                    'It will not be included in the graph'.format(market_name, exchange.id))
+                                    'It will not be included in the graph.'.format(market_name, exchange.id))
                 return
             if ask_volume is None:
                 file_logger.warning('Market {} on {} is unavailable because its ask volume was given as None. '
-                                    'It will not be included in the graph'.format(market_name, exchange.id))
+                                    'It will not be included in the graph.'.format(market_name, exchange.id))
                 return
     # ask and bid == None if this market is non existent.
     except TypeError:
-        file_logger.warning('Market {} is unavailable at this time. It will not be included in the graph'
+        file_logger.warning('Market {} is unavailable at this time. It will not be included in the graph.'
                             .format(market_name))
         return
 
@@ -170,7 +170,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     # todo: should we account for exchanges upon which an ask exists but a bid does not (and vice versa)? Would this
     # cause bugs?
     if ticker_ask == 0 or ticker_bid == 0 or ticker_ask is None or ticker_bid is None:
-        file_logger.warning('Market {} is unavailable at this time. It will not be included in the graph'
+        file_logger.warning('Market {} is unavailable at this time. It will not be included in the graph.'
                             .format(market_name))
         return
     try:
@@ -179,7 +179,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     except ValueError:
         if 'markets' not in suppress:
             file_logger.warning('Market {} is unavailable at this time due to incorrect formatting. It will not '
-                                'be included in the graph'.format(market_name))
+                                'be included in the graph.'.format(market_name))
         return
 
     if log:
