@@ -20,7 +20,7 @@ class BulkTickerFetcher:
 
     async def fetch_exchange_tickers(self):
         self.logger.info('Fetching exchange tickers')
-        tasks = [await self._fetch_exchange_tickers(exchange) for exchange in self.exchanges]
+        tasks = [self._fetch_exchange_tickers(exchange) for exchange in self.exchanges]
         await asyncio.wait(tasks)
         return self.ticker_dicts
 
