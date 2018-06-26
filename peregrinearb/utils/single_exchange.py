@@ -149,6 +149,9 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
         base_currency, quote_currency = market_name.split('/')
     # if ccxt returns a market in incorrect format (e.g FX_BTC_JPY on BitFlyer)
     except ValueError:
+        if 'markets' not in suppress:
+            warning = 'Market {} is unavailable at this time due to incorrect formatting.'.format(market_name)
+            warnings.warn(warning)
         return
 
     if log:
