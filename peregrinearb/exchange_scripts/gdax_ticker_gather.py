@@ -13,9 +13,12 @@ class GdaxTickerGatherer(TickerGatherer):
     def format_tickers(self):
         self.logger.debug('Formatting tickers')
         result = {}
-        for market, ticker in self.tickers:
-            result['market'.replace('-', '/')] = {'bid': ticker['bids'][0][0], 'bidVolume': ticker['bids'][0][1],
-                                                  'ask': ticker['asks'][0][0], 'askVolume': ticker['asks'][0][1]}
+        for market, ticker in self.tickers.items():
+            try:
+                result['market'.replace('-', '/')] = {'bid': ticker['bids'][0][0], 'bidVolume': ticker['bids'][0][1],
+                                                      'ask': ticker['asks'][0][0], 'askVolume': ticker['asks'][0][1]}
+            except KeyError:
+                self.logger.warning('Invalid result from GDAX\'s fetch_ticker endpoint. Received: '.format(str(ticker)))
         self.logger.debug('Formatted tickers')
 
         return result
