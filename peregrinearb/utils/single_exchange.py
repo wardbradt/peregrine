@@ -45,9 +45,9 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
         file_logger.info('Loading exchange graph for {}'.format(exchange.id))
 
     if tickers is None:
-        file_logger.debug('Fetching tickers for {}'.format(exchange.id))
+        file_logger.info('Fetching tickers for {}'.format(exchange.id))
         tickers = await exchange.fetch_tickers()
-        file_logger.debug('Fetched tickers for {}'.format(exchange.id))
+        file_logger.info('Fetched tickers for {}'.format(exchange.id))
 
     file_logger.debug('Checking fees')
     if fees:

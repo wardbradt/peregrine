@@ -74,14 +74,14 @@ class NegativeWeightFinder:
         self.logger.info('Running bellman_ford for exchange {}'.format(self.graph.graph['exchange_name']))
         self.initialize(source)
 
-        self.logger.debug('Relaxing edges')
+        self.logger.debug('Relaxing edges for {}'.format(self.graph.graph['exchange_name']))
         # After len(graph) - 1 passes, algorithm is complete.
         for i in range(len(self.graph) - 1):
             # for each node in the graph, test if the distance to each of its siblings is shorter by going from
             # source->base_currency + base_currency->quote_currency
             for edge in self.graph.edges(data=True):
                 self.relax(edge)
-        self.logger.debug('Finished relaxing edges')
+        self.logger.debug('Finished relaxing edges for {}'.format(self.graph.graph['exchange_name']))
 
         paths = self._check_final_condition(loop_from_source=loop_from_source,
                                             source=source,
@@ -341,7 +341,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         {'loop': arbitrage_loop, 'minimum' : minimum}, where arbitrage_loop is a negatively-weighted cycle and minimum
         is the least weight that can be started with at source.
         """
-        self.logger.debug('Retracing loop')
+        self.logger.info('Retracing loop')
         # todo: raise warning if source != ''
         if loop_from_source or ensure_profit:
             raise ValueError('NegativeWeightDepthFinder does not support loop_from_source or ensure_profit. If this '
@@ -366,7 +366,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             arbitrage_loop.insert(0, prior_node)
 
             if prior_node == arbitrage_loop[-1]:
-                self.logger.debug('Retraced loop')
+                self.logger.info('Retraced loop')
                 return {'loop': arbitrage_loop, 'minimum': minimum}
 
 

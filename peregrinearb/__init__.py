@@ -5,4 +5,3 @@ from .bellmannx import bellman_ford, calculate_profit_ratio_for_path, NegativeWe
     find_opportunities_on_exchange
 from .utils import *
 from .fetch_exchange_tickers import *
-from .exchange_scripts import *

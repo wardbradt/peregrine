@@ -44,18 +44,18 @@ class OpportunityFinder:
             raise ValueError("exchange is not a ccxt Exchange instance.")
 
         # try:
-        self.logger.debug('Fetching ticker from {} for {}'.format(exchange.id, self.market_name))
+        self.logger.info('Fetching ticker from {} for {}'.format(exchange.id, self.market_name))
         ticker = await exchange.fetch_ticker(self.market_name)
-        self.logger.debug('Fetched ticker from {} for {}'.format(exchange.id, self.market_name))
+        self.logger.info('Fetched ticker from {} for {}'.format(exchange.id, self.market_name))
         # A KeyError or ExchangeError occurs when the exchange does not have a market named self.market_name.
         # Any ccxt BaseError is because of ccxt, not this code.
         # except (KeyError, ccxt.ExchangeError, ccxt.BaseError):
         #     await exchange.close()
         #     return
 
-        self.logger.debug('Closing connection to {}'.format(exchange.id))
+        self.logger.info('Closing connection to {}'.format(exchange.id))
         await exchange.close()
-        self.logger.debug('Closed connection to {}'.format(exchange.id))
+        self.logger.info('Closed connection to {}'.format(exchange.id))
 
         ask = ticker['ask']
         bid = ticker['bid']
@@ -107,13 +107,13 @@ class SuperOpportunityFinder:
         self.logger.info('Finding inter-exchange opportunities.')
         tasks = [self._find_opportunity(market_name, exchange_list)
                  for market_name, exchange_list in self.collections.items()]
-        # i = 0
+        i = 0
         for result in asyncio.as_completed(tasks):
             # todo: do we want to do approval in here?
             yield await result
-            # i += 1
-            # if i == 15:
-            #     break
+            i += 1
+            if i == 15:
+                break
 
         tasks = [e.close() for e in self.exchanges.values()]
         await asyncio.wait(tasks)
@@ -122,7 +122,7 @@ class SuperOpportunityFinder:
     async def _find_opportunity(self, market_name, exchange_list):
         self.logger.info('Finding opportunity for {}'.format(market_name))
         opportunity = {'highest_bid': {'price': -1, 'exchange': None},
-                       'lowest_ask': {'price': -1, 'exchange': None},
+                       'lowest_ask': {'price': float('Inf'), 'exchange': None},
                        'ticker': market_name}
 
         tasks = [self.exchange_fetch_ticker(exchange_name, market_name) for exchange_name in exchange_list]
@@ -132,13 +132,17 @@ class SuperOpportunityFinder:
             if exchange_name is None:
                 continue
 
-            if ticker['bid'] > opportunity['highest_bid']['price']:
-                opportunity['highest_bid']['price'] = ticker['bid']
-                opportunity['highest_bid']['exchange'] = self.exchanges[exchange_name]
+            try:
+                if ticker['bid'] > opportunity['highest_bid']['price']:
+                    opportunity['highest_bid']['price'] = ticker['bid']
+                    opportunity['highest_bid']['exchange'] = exchange_name
 
-            if ticker['ask'] < opportunity['lowest_ask']['price']:
-                opportunity['lowest_ask']['price'] = ticker['bid']
-                opportunity['lowest_ask']['exchange'] = self.exchanges[exchange_name]
+                if ticker['ask'] < opportunity['lowest_ask']['price']:
+                    opportunity['lowest_ask']['price'] = ticker['bid']
+                    opportunity['lowest_ask']['exchange'] = exchange_name
+            # If ticker['bid'] or ticker['ask'] == None because of incredibly low volume
+            except TypeError:
+                continue
 
         self.logger.info('Found opportunity for {}'.format(market_name))
         return opportunity
