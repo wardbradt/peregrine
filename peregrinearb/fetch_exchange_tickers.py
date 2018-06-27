@@ -1,6 +1,7 @@
 import ccxt.async as ccxt
 import asyncio
 import logging
+from peregrinearb.settings import LOGGING_PATH
 
 
 class BulkTickerFetcher:
@@ -10,7 +11,7 @@ class BulkTickerFetcher:
         This could be used for when data is needed for both inter and intra exchange opportunity-finding to avoid
         pinging APIs twice for the same data.
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(LOGGING_PATH + __name__)
         if name:
             self.exchanges = [getattr(ccxt, exchange_name)() for exchange_name in exchange_names]
         else:

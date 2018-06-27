@@ -5,19 +5,20 @@ import asyncio
 from .utils import load_exchange_graph
 import numpy as np
 import logging
+from .settings import LOGGING_PATH
 
 
 class SeenNodeError(Exception):
     pass
 
 
-file_logger = logging.getLogger(__name__)
+file_logger = logging.getLogger(LOGGING_PATH + __name__)
 
 
 class NegativeWeightFinder:
 
     def __init__(self, graph: nx.Graph):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(LOGGING_PATH + __name__)
         self.logger.info('Initializing NegativeWeightFinder for {}'.format(graph.graph['exchange_name']))
         self.graph = graph
         self.predecessor_to = {}
@@ -279,7 +280,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         :param graph: A graph with 'weight' and 'depth' attributes on all edges.
         """
         super(NegativeWeightDepthFinder, self).__init__(graph)
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(LOGGING_PATH + __name__)
         # np.finfo(float).eps is the smallest non-zero positive float in Python, equivalent to 2.22044604925e-16
         # Change this number to find opportunities which start with a minimum amount of source.
         self.starting_amount = np.finfo(float).eps

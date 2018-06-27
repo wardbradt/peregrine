@@ -5,8 +5,10 @@ from ccxt import async as ccxt
 import warnings
 import datetime
 import logging
+from peregrinearb.settings import LOGGING_PATH
 
-file_logger = logging.getLogger(__name__)
+
+file_logger = logging.getLogger(LOGGING_PATH + __name__)
 
 
 def create_exchange_graph(exchange: ccxt.Exchange):
@@ -140,7 +142,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
         # any error is solely because of fetch_ticker
         except:
             if 'markets' not in suppress:
-                file_logger.warning('Market {} is unavailable at this time. It will not be included in the graph.'
+                file_logger.warning('Market {} is unavailable at this time. It will not be included in the graph.1'
                                     .format(market_name))
             return
 
@@ -178,8 +180,8 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     # if ccxt returns a market in incorrect format (e.g FX_BTC_JPY on BitFlyer)
     except ValueError:
         if 'markets' not in suppress:
-            file_logger.warning('Market {} is unavailable at this time due to incorrect formatting. It will not '
-                                'be included in the graph.'.format(market_name))
+            file_logger.warning('Market {} is unavailable from {} at this time due to incorrect formatting. It will not'
+                                ' be included in the graph.'.format(market_name, exchange.id))
         return
 
     if log:

@@ -2,9 +2,10 @@ import ccxt.async as ccxt
 from .async_build_markets import get_exchanges_for_market
 import asyncio
 import logging
+from .settings import LOGGING_PATH
 
 
-file_logger = logging.getLogger(__name__)
+file_logger = logging.getLogger(LOGGING_PATH + __name__)
 
 
 class OpportunityFinder:
@@ -15,7 +16,7 @@ class OpportunityFinder:
         cryptocurrency market by finding the exchange with the lowest market ask price and the exchange with the
         highest market bid price.
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(LOGGING_PATH + __name__)
         self.logger.debug('Initializing OpportunityFinder for {}'.format(market_name))
 
         if exchanges is None:
@@ -92,7 +93,7 @@ class SuperOpportunityFinder:
         :param collections: A dict of collections, as returned by CollectionBuilder in async_build_markets.py
         :param name: True if exchanges is a list of strings, False if it is a list of ccxt.Exchange objects
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(LOGGING_PATH + __name__)
         self.logger.debug('Initializing SuperOpportunityFinder')
         if name:
             self.exchanges = {e: getattr(ccxt, e)() for e in exchanges}
@@ -106,9 +107,13 @@ class SuperOpportunityFinder:
         self.logger.info('Finding inter-exchange opportunities.')
         tasks = [self._find_opportunity(market_name, exchange_list)
                  for market_name, exchange_list in self.collections.items()]
+        # i = 0
         for result in asyncio.as_completed(tasks):
             # todo: do we want to do approval in here?
             yield await result
+            # i += 1
+            # if i == 15:
+            #     break
 
         tasks = [e.close() for e in self.exchanges.values()]
         await asyncio.wait(tasks)
@@ -147,8 +152,12 @@ class SuperOpportunityFinder:
         try:
             ticker = await self.exchanges[exchange_name].fetch_ticker(market_name)
         except ccxt.DDoSProtection:
-            self.logger.warning('Rate limited for an exchange on {} inter-exchange opportunity.'
-                                .format(market_name))
+            self.logger.warning('Rate limited on {} for {} inter-exchange opportunity.'.format(exchange_name,
+                                                                                               market_name))
+            return None, None
+        except ccxt.ExchangeNotAvailable:
+            self.logger.warning('Fetching {} on {} raised an ExchangeNotAvailable error.'.format(exchange_name,
+                                                                                                 market_name))
             return None, None
 
         self.logger.debug('Fetched ticker from {} for {}'.format(exchange_name, market_name))

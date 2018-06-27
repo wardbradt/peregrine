@@ -1,12 +1,13 @@
 import asyncio
 import aiohttp
 import logging
+from peregrinearb.settings import LOGGING_PATH
 
 
 class TickerGatherer:
 
     def __init__(self, endpoint, markets=None):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(LOGGING_PATH + __name__)
         self.logger.debug('Initializing TickerGatherer')
         if markets is None:
             raise ValueError('markets cannot be none for class TickerGatherer. It is possible that a subclass of '
