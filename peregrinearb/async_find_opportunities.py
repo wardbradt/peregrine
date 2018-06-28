@@ -112,10 +112,8 @@ class SuperOpportunityFinder:
         for result in asyncio.as_completed(tasks):
             # todo: approval engine?
             opportunity = await result
-            # if opportunity['highest_bid']['exchange'] == opportunity['lowest_ask']['exchange']:
-            #     print('continue')
-            #     continue
-            # print('yield')
+            if opportunity['highest_bid']['exchange'] == opportunity['lowest_ask']['exchange']:
+                continue
             yield opportunity
 
         tasks = [e.close() for e in self.exchanges.values()]
