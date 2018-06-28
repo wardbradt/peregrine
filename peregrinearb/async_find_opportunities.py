@@ -3,6 +3,7 @@ from .async_build_markets import get_exchanges_for_market
 import asyncio
 import logging
 from .settings import LOGGING_PATH
+import datetime
 
 
 file_logger = logging.getLogger(LOGGING_PATH + __name__)
@@ -109,7 +110,13 @@ class SuperOpportunityFinder:
                  for market_name, exchange_list in self.collections.items()]
 
         for result in asyncio.as_completed(tasks):
-            yield await result
+            # todo: approval engine?
+            opportunity = await result
+            # if opportunity['highest_bid']['exchange'] == opportunity['lowest_ask']['exchange']:
+            #     print('continue')
+            #     continue
+            # print('yield')
+            yield opportunity
 
         tasks = [e.close() for e in self.exchanges.values()]
         await asyncio.wait(tasks)
@@ -125,7 +132,8 @@ class SuperOpportunityFinder:
         self.logger.info('Finding opportunity for {}'.format(market_name))
         opportunity = {'highest_bid': {'price': -1, 'exchange': None},
                        'lowest_ask': {'price': float('Inf'), 'exchange': None},
-                       'ticker': market_name}
+                       'ticker': market_name,
+                       'datetime': datetime.datetime.now()}
 
         tasks = [self.exchange_fetch_ticker(exchange_name, market_name) for exchange_name in exchange_list]
         for res in asyncio.as_completed(tasks):
