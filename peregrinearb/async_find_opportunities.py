@@ -129,17 +129,22 @@ class SuperOpportunityFinder:
 
         tasks = [self.exchange_fetch_ticker(exchange_name, market_name) for exchange_name in exchange_list]
         for res in asyncio.as_completed(tasks):
-            try:
-                ticker, exchange_name = await res
-            except ExchangeConnectionError as error:
-                self.rate_limited_exchanges.add(error.exchange_name)
+            ticker, exchange_name = await res
+            # If fetch_ticker() caused a ccxt.ExchangeNotAvailable error
+            if exchange_name is None:
+                continue
+            # Cannot catch Exception at this level because of asyncio, so if ticker is None, that means there was either
+            # a RequestTimeout or DDosProtection error.
+            if ticker is None:
+                self.rate_limited_exchanges.add(exchange_name)
                 await asyncio.sleep(1.2)
                 # Because of asynchronicity, error.exchange_name may no longer be in self.rate_limited_exchanges
-                if error.exchange_name in self.rate_limited_exchanges:
-                    self.rate_limited_exchanges.remove(error.exchange_name)
+                if exchange_name in self.rate_limited_exchanges:
+                    self.rate_limited_exchanges.remove(exchange_name)
 
                 return await self._find_opportunity(market_name, exchange_list)
-            except ccxt.ExchangeNotAvailable:
+
+            if ticker['bid'] == 0 or ticker['ask'] == 0:
                 continue
 
             try:
@@ -167,23 +172,18 @@ class SuperOpportunityFinder:
         except ccxt.DDoSProtection:
             self.logger.warning('Rate limited on {} for {} inter-exchange opportunity.'.format(exchange_name,
                                                                                                market_name))
-            raise ExchangeConnectionError(exchange_name)
+            return None, exchange_name
         except ccxt.RequestTimeout:
             self.logger.warning('Request timeout on {} for {} inter-exchange opportunity.'.format(exchange_name,
                                                                                                   market_name))
-            raise ExchangeConnectionError(exchange_name)
-        except ccxt.ExchangeNotAvailable as e:
+            return None, exchange_name
+        except ccxt.ExchangeNotAvailable:
             self.logger.warning('Fetching {} on {} raised an ExchangeNotAvailable error.'.format(exchange_name,
                                                                                                  market_name))
-            raise e
+            return None, None
 
         self.logger.debug('Fetched ticker from {} for {}'.format(exchange_name, market_name))
         return ticker, exchange_name
-
-
-class ExchangeConnectionError(Exception):
-    def __init__(self, exchange_name):
-        self.exchange_name = exchange_name
 
 
 def get_opportunities_for_collection(exchanges, collections, name=True):
