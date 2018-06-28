@@ -101,25 +101,27 @@ class SuperOpportunityFinder:
             self.exchanges = {e.id: e for e in exchanges}
         self.collections = collections
         self.logger.debug('Initialized SuperOpportunityFinder')
-        self.opportunities = {}
+        self.rate_limited_exchanges = set()
 
     async def get_opportunities(self):
         self.logger.info('Finding inter-exchange opportunities.')
         tasks = [self._find_opportunity(market_name, exchange_list)
                  for market_name, exchange_list in self.collections.items()]
-        i = 0
+
         for result in asyncio.as_completed(tasks):
-            # todo: do we want to do approval in here?
             yield await result
-            i += 1
-            if i == 15:
-                break
 
         tasks = [e.close() for e in self.exchanges.values()]
         await asyncio.wait(tasks)
         self.logger.info('Yielded all inter-exchange opportunities.')
 
     async def _find_opportunity(self, market_name, exchange_list):
+        # Try again in one second if any of these exchanges are currently rate limited.
+        for e in exchange_list:
+            if e in self.rate_limited_exchanges:
+                await asyncio.sleep(0.45)
+                return await self._find_opportunity(market_name, exchange_list)
+
         self.logger.info('Finding opportunity for {}'.format(market_name))
         opportunity = {'highest_bid': {'price': -1, 'exchange': None},
                        'lowest_ask': {'price': float('Inf'), 'exchange': None},
@@ -127,9 +129,17 @@ class SuperOpportunityFinder:
 
         tasks = [self.exchange_fetch_ticker(exchange_name, market_name) for exchange_name in exchange_list]
         for res in asyncio.as_completed(tasks):
-            ticker, exchange_name = await res
-            # None if DDoSProtection (rate limit) error was thrown in exchange_fetch_ticker
-            if exchange_name is None:
+            try:
+                ticker, exchange_name = await res
+            except ExchangeConnectionError as error:
+                self.rate_limited_exchanges.add(error.exchange_name)
+                await asyncio.sleep(1.2)
+                # Because of asynchronicity, error.exchange_name may no longer be in self.rate_limited_exchanges
+                if error.exchange_name in self.rate_limited_exchanges:
+                    self.rate_limited_exchanges.remove(error.exchange_name)
+
+                return await self._find_opportunity(market_name, exchange_list)
+            except ccxt.ExchangeNotAvailable:
                 continue
 
             try:
@@ -152,20 +162,28 @@ class SuperOpportunityFinder:
         Returns a two-tuple structured as (ticker, exchange_name)
         """
         self.logger.debug('Fetching ticker from {} for {}'.format(exchange_name, market_name))
-        # todo: what to do when we get rate limited?
         try:
             ticker = await self.exchanges[exchange_name].fetch_ticker(market_name)
         except ccxt.DDoSProtection:
             self.logger.warning('Rate limited on {} for {} inter-exchange opportunity.'.format(exchange_name,
                                                                                                market_name))
-            return None, None
-        except ccxt.ExchangeNotAvailable:
+            raise ExchangeConnectionError(exchange_name)
+        except ccxt.RequestTimeout:
+            self.logger.warning('Request timeout on {} for {} inter-exchange opportunity.'.format(exchange_name,
+                                                                                                  market_name))
+            raise ExchangeConnectionError(exchange_name)
+        except ccxt.ExchangeNotAvailable as e:
             self.logger.warning('Fetching {} on {} raised an ExchangeNotAvailable error.'.format(exchange_name,
                                                                                                  market_name))
-            return None, None
+            raise e
 
         self.logger.debug('Fetched ticker from {} for {}'.format(exchange_name, market_name))
         return ticker, exchange_name
+
+
+class ExchangeConnectionError(Exception):
+    def __init__(self, exchange_name):
+        self.exchange_name = exchange_name
 
 
 def get_opportunities_for_collection(exchanges, collections, name=True):
