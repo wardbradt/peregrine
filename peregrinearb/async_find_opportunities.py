@@ -125,6 +125,7 @@ class SuperOpportunityFinder:
         self.collections = collections
         self.adapter.debug('Initialized SuperOpportunityFinder')
         self.rate_limited_exchanges = set()
+        self._find_opportunity_calls = -1
 
     async def get_opportunities(self):
         self.adapter.info('Finding inter-exchange opportunities.')
@@ -143,10 +144,12 @@ class SuperOpportunityFinder:
         self.adapter.info('Yielded all inter-exchange opportunities.')
 
     async def _find_opportunity(self, market_name, exchange_list):
+        self._find_opportunity_calls += 1
+        await asyncio.sleep(0.02 * self._find_opportunity_calls)
         # Try again in one second if any of these exchanges are currently rate limited.
         for e in exchange_list:
             if e in self.rate_limited_exchanges:
-                await asyncio.sleep(0.45)
+                await asyncio.sleep(0.1)
                 return await self._find_opportunity(market_name, exchange_list)
 
         self.adapter.info(format_for_log('Finding opportunity', market=market_name))
@@ -165,7 +168,7 @@ class SuperOpportunityFinder:
             # a RequestTimeout or DDosProtection error.
             if ticker is None:
                 self.rate_limited_exchanges.add(exchange_name)
-                await asyncio.sleep(1.2)
+                await asyncio.sleep(0.2)
                 # Because of asynchronicity, error.exchange_name may no longer be in self.rate_limited_exchanges
                 if exchange_name in self.rate_limited_exchanges:
                     self.rate_limited_exchanges.remove(exchange_name)
