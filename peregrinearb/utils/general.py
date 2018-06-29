@@ -8,7 +8,16 @@ class ExchangeNotInCollectionsError(Exception):
         super(ExchangeNotInCollectionsError, self).__init__("{} is either an invalid exchange or has a broken API."
                                                             .format(market_ticker))
 
-        
+
+def format_for_log(msg, **kwargs):
+    result = ''
+    for key, value in kwargs.items():
+        key = str(key).capitalize()
+        result += '{}#{} - '.format(key, value)
+    result += msg
+    return result
+
+
 def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, starting_amount=100):
     if not path:
         return
