@@ -152,22 +152,22 @@ class SuperOpportunityFinder:
                 return await self._find_opportunity(market_name, exchange_list)
 
         self.adapter.info(format_for_log('Finding opportunity', opportunity=current_opp_id, market=market_name))
-        opportunity = {'highest_bid': {'price': -1, 'exchange': None},
-                       'lowest_ask': {'price': float('Inf'), 'exchange': None},
+        opportunity = {'highest_bid': {'price': -1, 'exchange': None, 'volume': 0},
+                       'lowest_ask': {'price': float('Inf'), 'exchange': None, 'volume': 0},
                        'ticker': market_name,
                        'datetime': datetime.datetime.now(),
                        'id': current_opp_id}
 
-        tasks = [self.exchange_fetch_ticker(exchange_name, market_name, current_opp_id)
+        tasks = [self.exchange_fetch_order_book(exchange_name, market_name, current_opp_id)
                  for exchange_name in exchange_list]
         for res in asyncio.as_completed(tasks):
-            ticker, exchange_name = await res
+            order_book, exchange_name = await res
             # If fetch_ticker() caused a ccxt.ExchangeNotAvailable error
             if exchange_name is None:
                 continue
             # Cannot catch Exception at this level because of asyncio, so if ticker is None, that means there was either
             # a RequestTimeout or DDosProtection error.
-            if ticker is None:
+            if order_book is None:
                 self.rate_limited_exchanges.add(exchange_name)
                 await asyncio.sleep(0.2)
                 # Because of asynchronicity, error.exchange_name may no longer be in self.rate_limited_exchanges
@@ -176,31 +176,33 @@ class SuperOpportunityFinder:
 
                 return await self._find_opportunity(market_name, exchange_list)
 
-            if ticker['bid'] == 0 or ticker['ask'] == 0:
+            if order_book['bids'] == [] or order_book['asks'] == []:
+                self.adapter.debug(format_for_log('No asks or no bids', exchange=exchange_name, market=market_name))
                 continue
 
-            try:
-                if ticker['bid'] > opportunity['highest_bid']['price']:
-                    opportunity['highest_bid']['price'] = ticker['bid']
-                    opportunity['highest_bid']['exchange'] = exchange_name
+            bid = order_book['bids'][0][0]
+            ask = order_book['asks'][0][0]
 
-                if ticker['ask'] < opportunity['lowest_ask']['price']:
-                    opportunity['lowest_ask']['price'] = ticker['bid']
-                    opportunity['lowest_ask']['exchange'] = exchange_name
-            # If ticker['bid'] or ticker['ask'] == None because of incredibly low volume
-            except TypeError:
-                continue
+            if bid > opportunity['highest_bid']['price']:
+                opportunity['highest_bid']['price'] = bid
+                opportunity['highest_bid']['exchange'] = exchange_name
+                opportunity['highest_bid']['volume'] = order_book['bids'][0][1]
+
+            if ask < opportunity['lowest_ask']['price']:
+                opportunity['lowest_ask']['price'] = ask
+                opportunity['lowest_ask']['exchange'] = exchange_name
+                opportunity['lowest_ask']['volume'] = order_book['asks'][0][1]
 
         self.adapter.info(format_for_log('Found opportunity', opportunity=current_opp_id, market=market_name))
         return opportunity
 
-    async def exchange_fetch_ticker(self, exchange_name, market_name, current_opp_id):
+    async def exchange_fetch_order_book(self, exchange_name, market_name, current_opp_id):
         """
         Returns a two-tuple structured as (ticker, exchange_name)
         """
         self.adapter.debug(format_for_log('Fetching ticker', market=market_name))
         try:
-            ticker = await self.exchanges[exchange_name].fetch_ticker(market_name)
+            order_book = await self.exchanges[exchange_name].fetch_order_book(market_name)
         except ccxt.DDoSProtection:
             self.adapter.warning(format_for_log('Rate limited for inter-exchange opportunity',
                                                 opportunity=current_opp_id,
@@ -222,7 +224,7 @@ class SuperOpportunityFinder:
 
         self.adapter.debug(format_for_log('Fetched ticker', opportunity=current_opp_id, exchange=exchange_name,
                                           market=market_name))
-        return ticker, exchange_name
+        return order_book, exchange_name
 
 
 def get_opportunities_for_collection(exchanges, collections, name=True):
