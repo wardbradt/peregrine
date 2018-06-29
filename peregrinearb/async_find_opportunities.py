@@ -16,20 +16,19 @@ class InterExchangeAdapter(logging.LoggerAdapter):
         super(InterExchangeAdapter, self).__init__(logger, extra)
     
     def process(self, msg, kwargs):
-        return 'Invocation#{} - Market#{} - {}'.format(self.extra['invocation_count'],
-                                                       self.extra['market'], msg), kwargs
+        return 'Invocation#{} - Market#{} - {}'.format(self.extra['invocation_id'], self.extra['market'], msg), kwargs
 
 
 class OpportunityFinder:
 
-    def __init__(self, market_name, exchanges=None, name=True, invocation_count=0):
+    def __init__(self, market_name, exchanges=None, name=True, invocation_id=0):
         """
         An object of type OpportunityFinder finds the largest price disparity between exchanges for a given
         cryptocurrency market by finding the exchange with the lowest market ask price and the exchange with the
         highest market bid price.
         """
         logger = logging.getLogger(LOGGING_PATH + __name__)
-        self.adapter = InterExchangeAdapter(logger, {'invocation_count': invocation_count, 'market': market_name})
+        self.adapter = InterExchangeAdapter(logger, {'invocation_id': invocation_id, 'market': market_name})
         self.adapter.debug('Initializing OpportunityFinder for {}'.format(market_name))
 
         if exchanges is None:
@@ -97,12 +96,12 @@ class SuperInterExchangeAdapter(logging.LoggerAdapter):
         super(SuperInterExchangeAdapter, self).__init__(logger, extra)
 
     def process(self, msg, kwargs):
-        return 'Invocation#{} - {}'.format(self.extra['invocation_count'], msg), kwargs
+        return 'Invocation#{} - {}'.format(self.extra['invocation_id'], msg), kwargs
 
 
 class SuperOpportunityFinder:
 
-    def __init__(self, exchanges, collections, name=True, invocation_count=0):
+    def __init__(self, exchanges, collections, name=True, invocation_id=0, opportunity_id=0):
         """
         SuperOpportunityFinder, given a dict of collections, yields opportunities in the order they come. There is not
         enough overlap between SuperOpportunityFinder and OpportunityFinder to warrant inheritance.
@@ -116,7 +115,7 @@ class SuperOpportunityFinder:
         :param name: True if exchanges is a list of strings, False if it is a list of ccxt.Exchange objects
         """
         logger = logging.getLogger(LOGGING_PATH + __name__)
-        self.adapter = SuperInterExchangeAdapter(logger, {'invocation_count': invocation_count})
+        self.adapter = SuperInterExchangeAdapter(logger, {'invocation_id': invocation_id})
         self.adapter.debug('Initializing SuperOpportunityFinder')
         if name:
             self.exchanges = {e: getattr(ccxt, e)() for e in exchanges}
@@ -126,6 +125,8 @@ class SuperOpportunityFinder:
         self.adapter.debug('Initialized SuperOpportunityFinder')
         self.rate_limited_exchanges = set()
         self._find_opportunity_calls = -1
+        # highest id of CrossExchangeOpportunity currently in the DB
+        self.opportunity_id = opportunity_id
 
     async def get_opportunities(self):
         self.adapter.info('Finding inter-exchange opportunities.')
@@ -141,6 +142,8 @@ class SuperOpportunityFinder:
 
     async def _find_opportunity(self, market_name, exchange_list):
         self._find_opportunity_calls += 1
+        self.opportunity_id += 1
+        current_opp_id = self.opportunity_id
         await asyncio.sleep(0.02 * self._find_opportunity_calls)
         # Try again in one second if any of these exchanges are currently rate limited.
         for e in exchange_list:
@@ -148,13 +151,15 @@ class SuperOpportunityFinder:
                 await asyncio.sleep(0.1)
                 return await self._find_opportunity(market_name, exchange_list)
 
-        self.adapter.info(format_for_log('Finding opportunity', market=market_name))
+        self.adapter.info(format_for_log('Finding opportunity', opportunity=current_opp_id, market=market_name))
         opportunity = {'highest_bid': {'price': -1, 'exchange': None},
                        'lowest_ask': {'price': float('Inf'), 'exchange': None},
                        'ticker': market_name,
-                       'datetime': datetime.datetime.now()}
+                       'datetime': datetime.datetime.now(),
+                       'id': current_opp_id}
 
-        tasks = [self.exchange_fetch_ticker(exchange_name, market_name) for exchange_name in exchange_list]
+        tasks = [self.exchange_fetch_ticker(exchange_name, market_name, current_opp_id)
+                 for exchange_name in exchange_list]
         for res in asyncio.as_completed(tasks):
             ticker, exchange_name = await res
             # If fetch_ticker() caused a ccxt.ExchangeNotAvailable error
@@ -186,10 +191,10 @@ class SuperOpportunityFinder:
             except TypeError:
                 continue
 
-        self.adapter.info(format_for_log('Found opportunity', market=market_name))
+        self.adapter.info(format_for_log('Found opportunity', opportunity=current_opp_id, market=market_name))
         return opportunity
 
-    async def exchange_fetch_ticker(self, exchange_name, market_name):
+    async def exchange_fetch_ticker(self, exchange_name, market_name, current_opp_id):
         """
         Returns a two-tuple structured as (ticker, exchange_name)
         """
@@ -198,21 +203,25 @@ class SuperOpportunityFinder:
             ticker = await self.exchanges[exchange_name].fetch_ticker(market_name)
         except ccxt.DDoSProtection:
             self.adapter.warning(format_for_log('Rate limited for inter-exchange opportunity',
+                                                opportunity=current_opp_id,
                                                 exchange=exchange_name,
                                                 market=market_name))
             return None, exchange_name
         except ccxt.RequestTimeout:
             self.adapter.warning(format_for_log('Request timeout for inter-exchange opportunity.',
+                                                opportunity=current_opp_id,
                                                 exchange=exchange_name,
                                                 market=market_name))
             return None, exchange_name
         except ccxt.ExchangeNotAvailable:
             self.adapter.warning(format_for_log('Fetching ticker raised an ExchangeNotAvailable error.',
+                                                opportunity=current_opp_id,
                                                 exchange=exchange_name,
                                                 market=market_name))
             return None, None
 
-        self.adapter.debug(format_for_log('Fetched ticker', exchange=exchange_name, market=market_name))
+        self.adapter.debug(format_for_log('Fetched ticker', opportunity=current_opp_id, exchange=exchange_name,
+                                          market=market_name))
         return ticker, exchange_name
 
 
@@ -221,9 +230,9 @@ def get_opportunities_for_collection(exchanges, collections, name=True):
     return finder.get_opportunities()
 
 
-async def get_opportunity_for_market(ticker, exchanges=None, name=True, invocation_count=0):
-    file_logger.info('Invocation#{} - Finding lowest ask and highest bid for {}'.format(invocation_count, ticker))
+async def get_opportunity_for_market(ticker, exchanges=None, name=True, invocation_id=0):
+    file_logger.info('Invocation#{} - Finding lowest ask and highest bid for {}'.format(invocation_id, ticker))
     finder = OpportunityFinder(ticker, exchanges=exchanges, name=name)
     result = await finder.find_min_max()
-    file_logger.info('Invocation#{} - Found lowest ask and highest bid for {}'.format(invocation_count, ticker))
+    file_logger.info('Invocation#{} - Found lowest ask and highest bid for {}'.format(invocation_id, ticker))
     return result

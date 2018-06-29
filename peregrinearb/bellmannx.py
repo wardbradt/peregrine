@@ -26,9 +26,9 @@ class BellmanExchangeAdapter(logging.LoggerAdapter):
 
 class NegativeWeightFinder:
 
-    def __init__(self, graph: nx.Graph, count=0):
+    def __init__(self, graph: nx.Graph, invocation_id=0):
         logger = logging.getLogger(LOGGING_PATH + __name__)
-        self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'], 'count': count})
+        self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
         self.adapter.info('Initializing NegativeWeightFinder')
         self.graph = graph
         self.predecessor_to = {}
@@ -267,7 +267,7 @@ class NegativeWeightFinder:
 
 class NegativeWeightDepthFinder(NegativeWeightFinder):
 
-    def __init__(self, graph: nx.Graph, count=0):
+    def __init__(self, graph: nx.Graph, invocation_id=0):
         """
         This variation of NegativeWeightFinder finds the most negative weight cycle including a source node in a
         graph. This varies from setting depth=True in NegativeWeightFinder in the following ways:
@@ -291,7 +291,8 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         """
         super(NegativeWeightDepthFinder, self).__init__(graph)
         logger = logging.getLogger(LOGGING_PATH + __name__)
-        self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'], 'count': count})
+        self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'],
+                                                       'count': invocation_id})
         # np.finfo(float).eps is the smallest non-zero positive float in Python, equivalent to 2.22044604925e-16
         # Change this number to find opportunities which start with a minimum amount of source.
         self.starting_amount = np.finfo(float).eps
@@ -406,8 +407,8 @@ def find_opportunities_on_exchange(exchange_name, source, loop_from_source=False
     return bellman_ford(graph, source, loop_from_source, ensure_profit, unique_paths)
 
 
-def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1, count=0):
-    adapter = BellmanExchangeAdapter(file_logger, {'exchange': graph.graph['exchange_name'], 'count': count})
+def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1, invocation_id=0):
+    adapter = BellmanExchangeAdapter(file_logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
     adapter.info('Calculating profit ratio')
     ratio = starting_amount
     for i in range(len(path) - 1):
