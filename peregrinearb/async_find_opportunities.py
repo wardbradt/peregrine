@@ -221,6 +221,9 @@ class SuperOpportunityFinder:
                                                 exchange=exchange_name,
                                                 market=market_name))
             return None, None
+        except ccxt.ExchangeError as e:
+            # todo
+            raise e
 
         self.adapter.debug(format_for_log('Fetched ticker', opportunity=current_opp_id, exchange=exchange_name,
                                           market=market_name))

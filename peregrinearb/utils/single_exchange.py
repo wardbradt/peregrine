@@ -2,7 +2,6 @@ import asyncio
 import math
 import networkx as nx
 from ccxt import async as ccxt
-import warnings
 import datetime
 import logging
 from peregrinearb.settings import LOGGING_PATH
@@ -16,6 +15,10 @@ class LoadExchangeGraphAdapter(logging.LoggerAdapter):
 
     def process(self, msg, kwargs):
         return 'Invocation#{} - Exchange#{} - {}'.format(self.extra['count'], self.extra['exchange'], msg), kwargs
+
+
+class FeesNotAvailable(Exception):
+    pass
 
 
 file_logger = logging.getLogger(LOGGING_PATH + __name__)
@@ -55,26 +58,14 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     else:
         adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
 
+    await exchange.load_markets()
+
     adapter.info('Loading exchange graph')
 
     if tickers is None:
         adapter.info('Fetching tickers')
         tickers = await exchange.fetch_tickers()
         adapter.info('Fetched tickers')
-
-    adapter.debug('Checking fees')
-    if fees:
-        if 'maker' in exchange.fees['trading']:
-            # we always take the maker side because arbitrage depends on filling orders
-            fee = exchange.fees['trading']['maker']
-        else:
-            if 'fees' not in suppress:
-                adapter.warning("The fees for {} have not yet been implemented into ccxt uniform API."
-                                " Values will be calculated using a 0.2% maker fee.".format(exchange))
-            fee = 0.002
-    else:
-        fee = 0
-    adapter.debug('Checked fees')
 
     adapter.debug('Initializing empty graph with exchange_name and timestamp attributes')
     graph = nx.DiGraph()
@@ -85,7 +76,7 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     adapter.debug('Initialized empty graph with exchange_name and timestamp attributes')
 
     adapter.info('Adding market data to graph')
-    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fee=fee, suppress=suppress,
+    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fees=fees, suppress=suppress,
                                          ticker=ticker, depth=depth, invocation_id=invocation_id)
              for market_name, ticker in tickers.items()]
     await asyncio.wait(tasks)
@@ -109,18 +100,7 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
         suppress = ['markets']
     result = nx.DiGraph()
 
-    fee = 0
-    if fees:
-        if 'maker' in exchange.fees['trading']:
-            # we always take the maker side because arbitrage depends on filling orders
-            fee = exchange.fees['trading']['maker']
-        else:
-            if 'fees' not in suppress:
-                warnings.warn("The fees for {} have not yet been implemented into the library. "
-                              "Values will be calculated using a 0.2% maker fee.".format(exchange))
-            fee = 0.002
-
-    tasks = [_add_weighted_edge_to_graph(exchange, edge[2]['market_name'], result, log, fee=fee, suppress=suppress,
+    tasks = [_add_weighted_edge_to_graph(exchange, edge[2]['market_name'], result, log, fees=fees, suppress=suppress,
                                          depth=depth)
              for edge in graph.edges(data=True)]
     await asyncio.wait(tasks)
@@ -129,7 +109,7 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
     return result
 
 
-async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True, fee=0,
+async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True, fees=False,
                                       suppress=None, ticker=None, depth=False, invocation_id=0):
     """
     todo: add global variable to bid_volume/ ask_volume to see if all tickers (for a given exchange) have value == None
@@ -158,6 +138,20 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
                 file_logger.warning(format_for_log('Market is unavailable at this time. It will not be included '
                                                    'in the graph.', market=market_name))
             return
+
+    if fees:
+        if 'taker' in exchange.markets[market_name]:
+            # we always take the taker side because arbitrage depends on filling orders
+            fee = exchange.fees['trading']['taker']
+        else:
+            if 'fees' not in suppress:
+                adapter.warning("The fees for {} have not yet been implemented into ccxt's uniform API."
+                                .format(exchange))
+                raise FeesNotAvailable('Fees are not available for {} on {}'.format(market_name, exchange.id))
+            else:
+                fee = 0.002
+    else:
+        fee = 0
 
     fee_scalar = 1 - fee
 

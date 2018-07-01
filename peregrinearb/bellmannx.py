@@ -407,19 +407,39 @@ def find_opportunities_on_exchange(exchange_name, source, loop_from_source=False
     return bellman_ford(graph, source, loop_from_source, ensure_profit, unique_paths)
 
 
-def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1, invocation_id=0):
+def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1, invocation_id=0,
+                                    gather_path_data=False):
+    """
+    If gather_path_data, returns a two-tuple where the first element is the profit ratio for the given path and the
+    second element is a dict keyed by market symbol and valued by a a dict with 'rate' and 'volume' keys, corresponding
+    to the rate and maximum volume for the trade.
+    """
     adapter = BellmanExchangeAdapter(file_logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
     adapter.info('Calculating profit ratio')
+    if gather_path_data:
+        path_data = []
+
     ratio = starting_amount
     for i in range(len(path) - 1):
         start = path[i]
         end = path[i + 1]
-        if depth:
-            depth = min(ratio, math.exp(-graph[start][end]['depth']))
-            ratio = math.exp(-graph[start][end]['weight']) * depth
+        if gather_path_data:
+            if depth:
+                depth = min(ratio, math.exp(-graph[start][end]['depth']))
+                rate = math.exp(-graph[start][end]['weight'])
+                path_data.append({'market_name': path[i] + '/' + path[i + 1], 'rate': rate, 'volume': depth})
+                ratio = rate * depth
+            else:
+                ratio *= math.exp(-graph[start][end]['weight'])
         else:
-            ratio *= math.exp(-graph[start][end]['weight'])
+            if depth:
+                depth = min(ratio, math.exp(-graph[start][end]['depth']))
+                ratio = math.exp(-graph[start][end]['weight']) * depth
+            else:
+                ratio *= math.exp(-graph[start][end]['weight'])
 
     adapter.info('Calculated profit ratio')
 
+    if gather_path_data:
+        return (ratio / starting_amount), path_data
     return ratio / starting_amount
