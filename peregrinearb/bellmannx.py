@@ -356,7 +356,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         self.adapter.info('Retracing loop')
         # todo: raise warning if source != ''
         if loop_from_source or ensure_profit:
-            raise ValueError('NegativeWeightDepthFinder does not support loop_from_source or ensure_profit. If this '
+            raise ValueError('NegativeWeightDepthFinder does not support loop_from_source nor ensure_profit. If this '
                              'error is showing, one of these parameters was set to true when _retrace_negative_loop '
                              'was called.')
 

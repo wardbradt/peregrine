@@ -39,7 +39,7 @@ class BulkTickerFetcher:
         self.adapter.info('Exchange#{} - Fetching tickers'.format(exchange.id))
         self.ticker_dicts[exchange.id] = await exchange.fetch_tickers()
         await exchange.close()
-        self.adapter.info('Exchange#{} - Finished fetching tickers'.format(exchange.id))
+        self.adapter.info('Exchange#{} - Fetched tickers'.format(exchange.id))
 
 
 async def fetch_exchange_tickers(exchange_names, name=True, count=0):

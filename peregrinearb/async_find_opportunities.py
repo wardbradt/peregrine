@@ -6,7 +6,6 @@ from .settings import LOGGING_PATH
 import datetime
 from .utils import format_for_log
 
-
 file_logger = logging.getLogger(LOGGING_PATH + __name__)
 
 
@@ -14,7 +13,7 @@ class InterExchangeAdapter(logging.LoggerAdapter):
 
     def __init__(self, logger, extra):
         super(InterExchangeAdapter, self).__init__(logger, extra)
-    
+
     def process(self, msg, kwargs):
         return 'Invocation#{} - Market#{} - {}'.format(self.extra['invocation_id'], self.extra['market'], msg), kwargs
 
@@ -51,7 +50,7 @@ class OpportunityFinder:
         retrieved ask.
         """
         self.adapter.info('Checking if {} qualifies for the highest bid or lowest ask for {}'.format(exchange.id,
-                                                                                                    self.market_name))
+                                                                                                     self.market_name))
         if not isinstance(exchange, ccxt.Exchange):
             raise ValueError("exchange is not a ccxt Exchange instance.")
 
@@ -79,7 +78,7 @@ class OpportunityFinder:
             self.lowest_ask['price'] = ask
             self.lowest_ask['exchange'] = exchange
         self.adapter.info('Checked if {} qualifies for the highest bid or lowest ask for {}'.format(exchange.id,
-                                                                                                   self.market_name))
+                                                                                                    self.market_name))
 
     async def find_min_max(self):
         tasks = [self._test_bid_and_ask(exchange_name) for exchange_name in self.exchange_list]
@@ -125,11 +124,31 @@ class SuperOpportunityFinder:
         self.adapter.debug('Initialized SuperOpportunityFinder')
         self.rate_limited_exchanges = set()
         self._find_opportunity_calls = -1
-        # highest id of CrossExchangeOpportunity currently in the DB
+        # starting opportunity id for logging
         self.opportunity_id = opportunity_id
+        self.usd_rates = {}
 
-    async def get_opportunities(self):
+    async def get_opportunities(self, price_markets=None):
+        """
+        :param price_markets: Optional. If you would like to first return the prices for the markets in price_markets
+        and the corresponding opportunities before finding other opportunities.
+        Example value is ['BTC/USD, BTC/USDT, ETH/USD, ETH/USDT]
+        For markets in price_markets, return a 2-tuple of (opportunity, prices). Read docstring of _find_opportunity for
+        more information.
+        """
         self.adapter.info('Finding inter-exchange opportunities.')
+
+        # If you would like to first return the prices for the markets in price_markets and the corresponding
+        # opportunities before finding other opportunities
+        if price_markets is not None:
+            # First collects the prices for
+            tasks = []
+            for market in price_markets:
+                tasks.append(self._find_opportunity(market, self.collections[market], True))
+                del self.collections[market]
+            for result in asyncio.as_completed(tasks):
+                yield await result
+
         tasks = [self._find_opportunity(market_name, exchange_list)
                  for market_name, exchange_list in self.collections.items()]
 
@@ -140,23 +159,33 @@ class SuperOpportunityFinder:
         await asyncio.wait(tasks)
         self.adapter.info('Yielded all inter-exchange opportunities.')
 
-    async def _find_opportunity(self, market_name, exchange_list):
+    async def _find_opportunity(self, market_name, exchange_list, return_prices=False):
+        """
+        :param return_prices: If True, returns a two-tuple where the first element is the opportunity dict and the
+        second element is a dict keyed by exchange name in exchange_list and valued with the corresponding price of
+        market_name. If False, returns the opportunity dict
+        """
         self._find_opportunity_calls += 1
         self.opportunity_id += 1
         current_opp_id = self.opportunity_id
         await asyncio.sleep(0.02 * self._find_opportunity_calls)
-        # Try again in one second if any of these exchanges are currently rate limited.
+        # Try again in 100 milliseconds if any of the exchanges in exchange_list are currently rate limited.
         for e in exchange_list:
             if e in self.rate_limited_exchanges:
                 await asyncio.sleep(0.1)
                 return await self._find_opportunity(market_name, exchange_list)
 
+        if return_prices:
+            prices = {}
+
         self.adapter.info(format_for_log('Finding opportunity', opportunity=current_opp_id, market=market_name))
-        opportunity = {'highest_bid': {'price': -1, 'exchange': None, 'volume': 0},
-                       'lowest_ask': {'price': float('Inf'), 'exchange': None, 'volume': 0},
-                       'ticker': market_name,
-                       'datetime': datetime.datetime.now(),
-                       'id': current_opp_id}
+        opportunity = {
+            'highest_bid': {'price': -1, 'exchange': None, 'volume': 0},
+            'lowest_ask': {'price': float('Inf'), 'exchange': None, 'volume': 0},
+            'ticker': market_name,
+            'datetime': datetime.datetime.now(),
+            'id': current_opp_id
+        }
 
         tasks = [self.exchange_fetch_order_book(exchange_name, market_name, current_opp_id)
                  for exchange_name in exchange_list]
@@ -183,6 +212,9 @@ class SuperOpportunityFinder:
             bid = order_book['bids'][0][0]
             ask = order_book['asks'][0][0]
 
+            if return_prices:
+                prices[exchange_name] = ask
+
             if bid > opportunity['highest_bid']['price']:
                 opportunity['highest_bid']['price'] = bid
                 opportunity['highest_bid']['exchange'] = exchange_name
@@ -194,6 +226,8 @@ class SuperOpportunityFinder:
                 opportunity['lowest_ask']['volume'] = order_book['asks'][0][1]
 
         self.adapter.info(format_for_log('Found opportunity', opportunity=current_opp_id, market=market_name))
+        if return_prices:
+            return opportunity, prices
         return opportunity
 
     async def exchange_fetch_order_book(self, exchange_name, market_name, current_opp_id):
@@ -225,9 +259,20 @@ class SuperOpportunityFinder:
             # todo
             raise e
 
+        cap_currency_index = market_name.find('USD')
+        # if self.cap_currency is the quote currency
+        if cap_currency_index >= 3:
+            self._add_to_rates_dict(exchange_name, market_name, order_book['bids'][0][0])
+
         self.adapter.debug(format_for_log('Fetched ticker', opportunity=current_opp_id, exchange=exchange_name,
                                           market=market_name))
         return order_book, exchange_name
+
+    def _add_to_rates_dict(self, exchange_name, market_name, price):
+        if exchange_name in self.usd_rates:
+            self.usd_rates[exchange_name][market_name] = price
+        else:
+            self.usd_rates[exchange_name] = {market_name: price}
 
 
 def get_opportunities_for_collection(exchanges, collections, name=True):
