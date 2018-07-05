@@ -427,7 +427,11 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
             if depth:
                 depth = min(ratio, math.exp(-graph[start][end]['depth']))
                 rate = math.exp(-graph[start][end]['weight'])
-                path_data.append({'market_name': path[i] + '/' + path[i + 1], 'rate': rate, 'volume': depth})
+                path_data.append({'market_name': graph[start][end]['market_name'],
+                                  'rate': rate,
+                                  'volume': depth,
+                                  # if start comes before end in path, this is a sell order.
+                                  'order': 'sell' if graph[start][end]['market_name'].find(start) == 0 else 'buy'})
                 ratio = rate * depth
             else:
                 ratio *= math.exp(-graph[start][end]['weight'])

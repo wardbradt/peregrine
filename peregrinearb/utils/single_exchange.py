@@ -194,18 +194,24 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     if log:
         if depth:
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
-                           depth=-math.log(bid_volume))
+                           depth=-math.log(bid_volume), market_name=market_name)
             graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
-                           depth=-math.log(ask_volume))
+                           depth=-math.log(ask_volume), market_name=market_name)
         else:
-            graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid))
-            graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask))
+            graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
+                           market_name=market_name)
+            graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
+                           market_name=market_name)
     else:
         if depth:
-            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid, depth=bid_volume)
-            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask, depth=ask_volume)
+            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid, depth=bid_volume,
+                           market_name=market_name)
+            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask, depth=ask_volume,
+                           market_name=market_name)
         else:
-            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid)
-            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask)
+            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid,
+                           market_name=market_name)
+            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask,
+                           market_name=market_name)
 
     adapter.debug(format_for_log('Added edge to graph', market=market_name))
