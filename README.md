@@ -1,6 +1,6 @@
 # Peregrine
 
-A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries
+A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries on over 38,000 trading pairs
 
 ## Installation
 1. Ensure you have [installed pip](https://pip.pypa.io/en/stable/installing/).
