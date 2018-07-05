@@ -196,7 +196,9 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
                            depth=-math.log(bid_volume), market_name=market_name)
             graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
-                           depth=-math.log(ask_volume), market_name=market_name)
+                           depth=-math.log(ask_volume),
+                           # depth=-math.log(ask_volume * ticker_ask),
+                           market_name=market_name)
         else:
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
                            market_name=market_name)
