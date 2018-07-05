@@ -194,6 +194,9 @@ class SuperOpportunityFinder:
             # If fetch_ticker() caused a ccxt.ExchangeNotAvailable error
             if exchange_name is None:
                 continue
+            # If the market had too low of volume
+            if not order_book:
+                continue
             # Cannot catch Exception at this level because of asyncio, so if ticker is None, that means there was either
             # a RequestTimeout or DDosProtection error.
             if order_book is None:
@@ -204,10 +207,6 @@ class SuperOpportunityFinder:
                     self.rate_limited_exchanges.remove(exchange_name)
 
                 return await self._find_opportunity(market_name, exchange_list)
-
-            if order_book['bids'] == [] or order_book['asks'] == []:
-                self.adapter.debug(format_for_log('No asks or no bids', exchange=exchange_name, market=market_name))
-                continue
 
             bid = order_book['bids'][0][0]
             ask = order_book['asks'][0][0]
@@ -259,9 +258,13 @@ class SuperOpportunityFinder:
             # todo
             raise e
 
+        if order_book['bids'] == [] or order_book['asks'] == []:
+            self.adapter.debug(format_for_log('No asks or no bids', exchange=exchange_name, market=market_name))
+            return [], exchange_name
+
         cap_currency_index = market_name.find('USD')
         # if self.cap_currency is the quote currency
-        if cap_currency_index >= 3:
+        if cap_currency_index > 0:
             self._add_to_rates_dict(exchange_name, market_name, order_book['bids'][0][0])
 
         self.adapter.debug(format_for_log('Fetched ticker', opportunity=current_opp_id, exchange=exchange_name,
