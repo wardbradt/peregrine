@@ -1,6 +1,6 @@
 # Peregrine
 
-A Python library which provides several algorithms to detect arbitrage opportunities across over 90 cryptocurrency exchanges in 34 countries
+A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries
 
 ## Installation
 1. Ensure you have [installed pip](https://pip.pypa.io/en/stable/installing/).
@@ -49,7 +49,7 @@ opportunity = get_opportunity_for_market("ETH/BTC", us_eth_btc_exchanges["ETH/BT
 print(opportunity)
 ```
 
-<sup>1</sup>Accepted arguments in place of "US" in this example are Austria, Australia, Bulgaria, Brazil, British Virgin Islands, Canada, China, Czech Republic, EU, Germany, Hong Kong, Iceland, India, Indonesia, Israel, Japan, Mexico, New Zealand, Panama, Philippines, Poland, Russia, Seychelles, Singapore, South Korea, St. Vincent & Grenadines, Sweden, Tanzania, Thailand, Turkey, UK, Ukraine, and Vietnam.
+<sup>1</sup>Accepted arguments in place of 'US' in this example are 'PA', 'AU', 'CA', 'JP', 'SG', 'HK', 'NZ', 'IE', 'CN', 'KR', 'IL', 'MT', 'EU', 'VG', 'GB', 'RU', 'PL', 'SC', 'MX', 'NL', 'BR', 'PH', 'UA', 'TR', 'IS', 'TH', 'DE', 'CY', 'CL', 'TW', 'ID', 'UK', 'IN', 'VN', 'BG', 'CZ', 'ES', 'SE', 'VC', 'ZA', 'CH', 'TZ', 'FR', 'AR', 'VE', 'PK', and 'AT'.
 
 ### One Exchange/ Multiple Currencies
 
