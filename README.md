@@ -6,7 +6,7 @@ A Python library which provides several algorithms to detect arbitrage opportuni
 1. Ensure you have [installed pip](https://pip.pypa.io/en/stable/installing/).
 2. Run the following in your command line:
 ```
-pip install peregrinearb
+pip install git+git://github.com/Stakedllc/peregrine.git
 ```
 
 ## Finding Arbitrage Opportunities: Example Usage
@@ -153,21 +153,15 @@ BCH to ETH at 1.8874401 = 118.18480885571941 on bittrex for BCH/ETH
 ```
 
 ## To Do
-
 * Implement a fix to convert from USDT to USD and back again for markets based on USDT
-* Package for pip
 * Write better/ more examples and unit tests
-* Fix frequent `Unclosed connector` ccxt error (look at [this issue](https://github.com/ccxt/ccxt/issues/2092))
 ## Potential Enhancements
 
 * Create (better) data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
 * Implement machine learning to see which markets or exchanges consistently host the greatest disparities
 * Update cythonperegrine to reflect some of the changes to peregrine
 * Update doc strings to the same [standard](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard) as NumPy and SciPy
-* Research [this paper](http://www.quantumforquants.org/quantum-computing/qa-arbitrage/) which discusses a more efficient way of finding the best arbitrage opportunity. It would take much work to implement but if someone with experience in quantum computing could help me that would be great.
 * Related to the above, implement feature to find maximally profitable arbitrage opportunity.
-* Implement `amount` parameter in bellman_ford to find cycles using at maximum the given amount.
-* Research each exchange's fees and hard-code them (optionally into ccxt's Exchange objects) to account for fees when searching for opportunities.
 
 ## Tips
 If you have benefitted from Peregrine and would like to show your appreciation, feel free to send funds to any of the following addresses:
