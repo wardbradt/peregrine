@@ -58,8 +58,6 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     else:
         adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
 
-    await exchange.load_markets()
-
     adapter.info('Loading exchange graph')
 
     if tickers is None:
@@ -196,8 +194,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
                            depth=-math.log(bid_volume), market_name=market_name)
             graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
-                           depth=-math.log(ask_volume),
-                           # depth=-math.log(ask_volume * ticker_ask),
+                           depth=-math.log(ask_volume * ticker_ask),
                            market_name=market_name)
         else:
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),

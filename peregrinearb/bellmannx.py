@@ -28,7 +28,12 @@ class NegativeWeightFinder:
 
     def __init__(self, graph: nx.Graph, invocation_id=0):
         logger = logging.getLogger(LOGGING_PATH + __name__)
-        self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
+        try:
+            self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
+        # if graph.graph['exchange_name'] does not exist
+        except KeyError:
+            self.adapter = BellmanExchangeAdapter(logger,
+                                                  {'exchange': '', 'count': invocation_id})
         self.adapter.info('Initializing NegativeWeightFinder')
         self.graph = graph
         self.predecessor_to = {}
@@ -291,8 +296,12 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         """
         super(NegativeWeightDepthFinder, self).__init__(graph)
         logger = logging.getLogger(LOGGING_PATH + __name__)
-        self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'],
-                                                       'count': invocation_id})
+        try:
+            self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'],
+                                                           'count': invocation_id})
+        except KeyError:
+            self.adapter = BellmanExchangeAdapter(logger, {'exchange': '',
+                                                           'count': invocation_id})
         # np.finfo(float).eps is the smallest non-zero positive float in Python, equivalent to 2.22044604925e-16
         # Change this number to find opportunities which start with a minimum amount of source.
         self.starting_amount = np.finfo(float).eps
@@ -414,7 +423,11 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
     second element is a dict keyed by market symbol and valued by a a dict with 'rate' and 'volume' keys, corresponding
     to the rate and maximum volume for the trade.
     """
-    adapter = BellmanExchangeAdapter(file_logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
+    try:
+        adapter = BellmanExchangeAdapter(file_logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
+    except KeyError:
+        adapter = BellmanExchangeAdapter(file_logger, {'exchange': '',
+                                                       'count': invocation_id})
     adapter.info('Calculating profit ratio')
     if gather_path_data:
         path_data = []
@@ -423,26 +436,26 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
     for i in range(len(path) - 1):
         start = path[i]
         end = path[i + 1]
-        if gather_path_data:
-            if depth:
-                # sell order if True, buy order if false
-                sell = graph[start][end]['market_name'].find(start) == 0
-                depth = min(ratio, math.exp(-graph[start][end]['depth']))
-                rate = math.exp(-graph[start][end]['weight'])
+        if depth:
+            sell = graph[start][end]['market_name'].find(start) == 0
+            rate = math.exp(-graph[start][end]['weight'])
+            volume = min(ratio, math.exp(-graph[start][end]['depth']))
+            if not sell:
+                # because for buy orders, the edge weight in the graph is saved as 1 / lowest ask
+                rate = 1 / rate
+                volume /= rate
+
+            ratio = rate * volume
+
+            if gather_path_data:
                 path_data.append({'market_name': graph[start][end]['market_name'],
-                                  'rate': rate if sell else 1 / rate,
-                                  'volume': depth,
+                                  'rate': rate,
+                                  # put volume in terms of base currency
+                                  'volume': volume,
                                   # if start comes before end in path, this is a sell order.
                                   'order': 'sell' if sell else 'buy'})
-                ratio = rate * depth
-            else:
-                ratio *= math.exp(-graph[start][end]['weight'])
         else:
-            if depth:
-                depth = min(ratio, math.exp(-graph[start][end]['depth']))
-                ratio = math.exp(-graph[start][end]['weight']) * depth
-            else:
-                ratio *= math.exp(-graph[start][end]['weight'])
+            ratio *= math.exp(-graph[start][end]['weight'])
 
     adapter.info('Calculated profit ratio')
 
