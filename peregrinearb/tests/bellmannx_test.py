@@ -109,9 +109,9 @@ class TestBellmannx(TestCase):
         total = 0
         G = nx.DiGraph()
         for i in range(1, 7):
-            G.add_edge('A', 'B', weight=-math.log(2), depth=0)
-            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
-            G.add_edge('C', 'A', weight=-math.log(2 / 7), depth=-math.log(i))
+            G.add_edge('A', 'B', weight=-math.log(2), depth=0, market_name='A/B')
+            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2), market_name='B/C')
+            G.add_edge('C', 'A', weight=-math.log(2 / 7), depth=-math.log(i), market_name='C/A')
 
             finder = NegativeWeightDepthFinder(G)
             paths = finder.bellman_ford('A')
