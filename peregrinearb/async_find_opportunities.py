@@ -192,7 +192,7 @@ class SuperOpportunityFinder:
             'id': current_opp_id
         }
 
-        tasks = [self.exchange_fetch_order_book(exchange_name, market_name, current_opp_id)
+        tasks = [self._exchange_fetch_order_book(exchange_name, market_name, current_opp_id)
                  for exchange_name in exchange_list]
         for res in asyncio.as_completed(tasks):
             order_book, exchange_name = await res
@@ -239,11 +239,12 @@ class SuperOpportunityFinder:
             return opportunity, prices
         return opportunity
 
-    async def exchange_fetch_order_book(self, exchange_name, market_name, current_opp_id):
+    async def _exchange_fetch_order_book(self, exchange_name, market_name, current_opp_id):
         """
         Returns a two-tuple structured as (ticker, exchange_name)
         """
-        self.adapter.debug(format_for_log('Fetching ticker', market=market_name))
+        self.adapter.debug(format_for_log('Fetching ticker', opportunity=current_opp_id,
+                                          exchange=exchange_name, market=market_name))
         try:
             order_book = await self.exchanges[exchange_name].fetch_order_book(market_name)
         except ccxt.DDoSProtection:
