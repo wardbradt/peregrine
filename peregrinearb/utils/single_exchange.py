@@ -58,12 +58,13 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     else:
         adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
 
-    adapter.info('Loading exchange graph')
-
     if tickers is None:
         adapter.info('Fetching tickers')
         tickers = await exchange.fetch_tickers()
         adapter.info('Fetched tickers')
+
+    market_count = len(tickers)
+    adapter.info(format_for_log('Loading exchange graph', marketCount=market_count))
 
     adapter.debug('Initializing empty graph with exchange_name and timestamp attributes')
     graph = nx.DiGraph()
@@ -73,25 +74,37 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     graph.graph['timestamp'] = datetime.datetime.now()
     adapter.debug('Initialized empty graph with exchange_name and timestamp attributes')
 
-    adapter.info('Adding market data to graph')
+    async def add_edges():
+        tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fees=fees, suppress=suppress,
+                                             ticker=ticker, depth=depth, invocation_id=invocation_id)
+                 for market_name, ticker in tickers.items()]
+        await asyncio.wait(tasks)
+
     if fees:
         for i in range(20):
             try:
+                adapter.info(format_for_log('Loading fees', iteration=i))
                 # must load markets to get fees
                 await exchange.load_markets()
             except (ccxt.DDoSProtection, ccxt.RequestTimeout) as e:
-                adapter.warning('Rate limited when loading markets')
                 if i == 19:
+                    adapter.warning('Rate limited on final iteration, raising error', iteration=i)
                     raise e
+                adapter.warning('Rate limited when loading markets', iteration=i)
                 await asyncio.sleep(0.1)
             else:
                 break
 
-    tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fees=fees, suppress=suppress,
-                                         ticker=ticker, depth=depth, invocation_id=invocation_id)
-             for market_name, ticker in tickers.items()]
-    await asyncio.wait(tasks)
-    adapter.info('Added data to graph')
+        currency_count = len(exchange.currencies)
+        adapter.info(format_for_log('Loaded markets', iteration=i, marketCount=market_count))
+
+        adapter.info(format_for_log('Adding data to graph', marketCount=market_count, currencyCount=currency_count))
+        await add_edges()
+        adapter.info(format_for_log('Added data to graph', marketCount=market_count, currencyCount=currency_count))
+    else:
+        adapter.info(format_for_log('Adding data to graph', marketCount=market_count))
+        await add_edges()
+        adapter.info(format_for_log('Added data to graph', marketCount=market_count))
 
     adapter.debug('Closing connection')
     await exchange.close()
@@ -121,8 +134,7 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
 
 
 async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True,
-                                      fees=False,
-                                      suppress=None, ticker=None, depth=False, invocation_id=0):
+                                      fees=False, suppress=None, ticker=None, depth=False, invocation_id=0):
     """
     todo: add global variable to bid_volume/ ask_volume to see if all tickers (for a given exchange) have value == None
     Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
@@ -154,7 +166,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     if fees:
         if 'taker' in exchange.markets[market_name]:
             # we always take the taker side because arbitrage depends on filling orders
-            fee = exchange.fees['trading']['taker']
+            fee = exchange.markets[market_name]['taker']
         else:
             if 'fees' not in suppress:
                 adapter.warning("The fees for {} have not yet been implemented into ccxt's uniform API."
