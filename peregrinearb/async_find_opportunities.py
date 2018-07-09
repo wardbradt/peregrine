@@ -4,7 +4,8 @@ import asyncio
 import logging
 from .settings import LOGGING_PATH
 import datetime
-from .utils import format_for_log
+from .utils import format_for_log, Collections
+
 
 file_logger = logging.getLogger(LOGGING_PATH + __name__)
 
@@ -110,7 +111,8 @@ class SuperOpportunityFinder:
         connections).
 
         :param exchanges: A list of exchanges, either ccxt.Exchange objects or names of exchanges
-        :param collections: A dict of collections, as returned by CollectionBuilder in async_build_markets.py
+        :param collections: A dict of collections, as returned by CollectionBuilder in async_build_markets.py. The
+        self.collections field will be a Collections object.
         :param name: True if exchanges is a list of strings, False if it is a list of ccxt.Exchange objects
         """
         logger = logging.getLogger(LOGGING_PATH + __name__)
@@ -120,7 +122,7 @@ class SuperOpportunityFinder:
             self.exchanges = {e: getattr(ccxt, e)() for e in exchanges}
         else:
             self.exchanges = {e.id: e for e in exchanges}
-        self.collections = collections
+        self.collections = Collections(collections)
         self.adapter.debug('Initialized SuperOpportunityFinder')
         self.rate_limited_exchanges = set()
         self._find_opportunity_calls = -1
@@ -141,16 +143,19 @@ class SuperOpportunityFinder:
         # If you would like to first return the prices for the markets in price_markets and the corresponding
         # opportunities before finding other opportunities
         if price_markets is not None:
-            # First collects the prices for
+            collections = self.collections
+            # First collects the prices for the markets in price_markets
             tasks = []
             for market in price_markets:
                 tasks.append(self._find_opportunity(market, self.collections[market], True))
-                del self.collections[market]
+                del collections[market]
             for result in asyncio.as_completed(tasks):
                 yield await result
+        else:
+            collections = self.collections
 
         tasks = [self._find_opportunity(market_name, exchange_list)
-                 for market_name, exchange_list in self.collections.items()]
+                 for market_name, exchange_list in collections.items()]
 
         for result in asyncio.as_completed(tasks):
             yield await result
@@ -191,11 +196,8 @@ class SuperOpportunityFinder:
                  for exchange_name in exchange_list]
         for res in asyncio.as_completed(tasks):
             order_book, exchange_name = await res
-            # If fetch_ticker() caused a ccxt.ExchangeNotAvailable error
+            # If the order book's volume was too low or fetch_ticker raised ExchangeError or ExchangeNotAvailable
             if exchange_name is None:
-                continue
-            # If the market had too low of volume
-            if not order_book:
                 continue
             # Cannot catch Exception at this level because of asyncio, so if ticker is None, that means there was either
             # a RequestTimeout or DDosProtection error.
@@ -206,7 +208,15 @@ class SuperOpportunityFinder:
                 if exchange_name in self.rate_limited_exchanges:
                     self.rate_limited_exchanges.remove(exchange_name)
 
-                return await self._find_opportunity(market_name, exchange_list)
+                if market_name in self.collections:
+                    # self.collections[market_name] instead of exchange_list because an exchange is removed if it
+                    # raised ExchangeError, which signals that the exchange no longer supports the specified market
+                    return await self._find_opportunity(market_name, self.collections[market_name])
+                # edge case: if it was removed because there were only two exchanges for this market and one of them
+                # was removed because it no longer supports this market. likely will happen only with very low-volume
+                # and exotic markets
+                else:
+                    return opportunity
 
             bid = order_book['bids'][0][0]
             ask = order_book['asks'][0][0]
@@ -248,19 +258,24 @@ class SuperOpportunityFinder:
                                                 exchange=exchange_name,
                                                 market=market_name))
             return None, exchange_name
+        # If the exchange no longer has the specified market
+        except ccxt.ExchangeError:
+            self.adapter.warning(format_for_log('Fetching ticker raised an ExchangeError.',
+                                                opportunity=current_opp_id,
+                                                exchange=exchange_name,
+                                                market=market_name))
+            self.collections.remove_exchange_from_market(exchange_name, market_name)
+            return None, None
         except ccxt.ExchangeNotAvailable:
             self.adapter.warning(format_for_log('Fetching ticker raised an ExchangeNotAvailable error.',
                                                 opportunity=current_opp_id,
                                                 exchange=exchange_name,
                                                 market=market_name))
             return None, None
-        except ccxt.ExchangeError as e:
-            # todo
-            raise e
 
         if order_book['bids'] == [] or order_book['asks'] == []:
             self.adapter.debug(format_for_log('No asks or no bids', exchange=exchange_name, market=market_name))
-            return [], exchange_name
+            return None, None
 
         cap_currency_index = market_name.find('USD')
         # if self.cap_currency is the quote currency

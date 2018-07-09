@@ -58,8 +58,6 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     else:
         adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
 
-    await exchange.load_markets()
-
     adapter.info('Loading exchange graph')
 
     if tickers is None:
@@ -76,6 +74,19 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     adapter.debug('Initialized empty graph with exchange_name and timestamp attributes')
 
     adapter.info('Adding market data to graph')
+    if fees:
+        for i in range(20):
+            try:
+                # must load markets to get fees
+                await exchange.load_markets()
+            except (ccxt.DDoSProtection, ccxt.RequestTimeout) as e:
+                adapter.warning('Rate limited when loading markets')
+                if i == 19:
+                    raise e
+                await asyncio.sleep(0.1)
+            else:
+                break
+
     tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fees=fees, suppress=suppress,
                                          ticker=ticker, depth=depth, invocation_id=invocation_id)
              for market_name, ticker in tickers.items()]
@@ -86,7 +97,7 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     await exchange.close()
     adapter.info('Closed connection')
 
-    file_logger.info('Loaded exchange graph')
+    adapter.info('Loaded exchange graph')
     return graph
 
 
@@ -109,7 +120,8 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
     return result
 
 
-async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True, fees=False,
+async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True,
+                                      fees=False,
                                       suppress=None, ticker=None, depth=False, invocation_id=0):
     """
     todo: add global variable to bid_volume/ ask_volume to see if all tickers (for a given exchange) have value == None
@@ -121,7 +133,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     :param graph: A Networkx DiGraph upon
     :param log: If the edge weights given to the graph should be the negative logarithm of the ask and bid prices. This
     is necessary to calculate arbitrage opportunities.
-    :param fee: The fee applied to the base currency represented as a decimal.
+    :param fees: If fees should be taken into account for prices.
     :param suppress: A list or set which tells which types of warnings to not throw. Accepted elements are 'markets'.
     :param ticker: A dictionary representing a market as returned by ccxt's Exchange's fetch_ticker method
     :param depth: If True, also adds an attribute 'depth' to each edge which represents the current volume of orders
@@ -135,8 +147,8 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
         # any error is solely because of fetch_ticker
         except:
             if 'markets' not in suppress:
-                file_logger.warning(format_for_log('Market is unavailable at this time. It will not be included '
-                                                   'in the graph.', market=market_name))
+                adapter.warning(format_for_log('Market is unavailable at this time. It will not be included '
+                                               'in the graph.', market=market_name))
             return
 
     if fees:
@@ -162,33 +174,33 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
             bid_volume = ticker['bidVolume']
             ask_volume = ticker['askVolume']
             if bid_volume is None:
-                file_logger.warning(format_for_log('Market is unavailable because its bid volume was given as None. '
-                                                   'It will not be included in the graph.', market=market_name))
+                adapter.warning(format_for_log('Market is unavailable because its bid volume was given as None. '
+                                               'It will not be included in the graph.', market=market_name))
                 return
             if ask_volume is None:
-                file_logger.warning(format_for_log('Market is unavailable because its ask volume was given as None. '
-                                                   'It will not be included in the graph.', market=market_name))
+                adapter.warning(format_for_log('Market is unavailable because its ask volume was given as None. '
+                                               'It will not be included in the graph.', market=market_name))
                 return
     # ask and bid == None if this market is non existent.
     except TypeError:
-        file_logger.warning(format_for_log('Market is unavailable at this time. It will not be included in the graph.',
-                                           market=market_name))
+        adapter.warning(format_for_log('Market is unavailable at this time. It will not be included in the graph.',
+                                       market=market_name))
         return
 
     # Exchanges give asks and bids as either 0 or None when they do not exist.
     # todo: should we account for exchanges upon which an ask exists but a bid does not (and vice versa)? Would this
     # cause bugs?
     if ticker_ask == 0 or ticker_bid == 0 or ticker_ask is None or ticker_bid is None:
-        file_logger.warning(format_for_log('Market is unavailable at this time. It will not be included in the graph.',
-                                           market=market_name))
+        adapter.warning(format_for_log('Market is unavailable at this time. It will not be included in the graph.',
+                                       market=market_name))
         return
     try:
         base_currency, quote_currency = market_name.split('/')
     # if ccxt returns a market in incorrect format (e.g FX_BTC_JPY on BitFlyer)
     except ValueError:
         if 'markets' not in suppress:
-            file_logger.warning(format_for_log('Market is unavailable at this time due to incorrect formatting. '
-                                               'It will not be included in the graph.', market=market_name))
+            adapter.warning(format_for_log('Market is unavailable at this time due to incorrect formatting. '
+                                           'It will not be included in the graph.', market=market_name))
         return
 
     if log:
@@ -196,8 +208,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
                            depth=-math.log(bid_volume), market_name=market_name)
             graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
-                           depth=-math.log(ask_volume),
-                           # depth=-math.log(ask_volume * ticker_ask),
+                           depth=-math.log(ask_volume * ticker_ask),
                            market_name=market_name)
         else:
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
