@@ -1,6 +1,55 @@
 import heapq
 
 
+class Collections:
+
+    def __init__(self, collects):
+        self.collections = collects
+
+    def remove_exchange_from_market(self, exchange_name, market_name):
+        """
+        Removes exchange_name from market_name. If exchange_name is one of 2 exchanges in market_name, removes
+        market_name.
+        """
+        if market_name not in self.collections.keys():
+            raise ValueError('market {} not in collections. called while trying to remove exchange {}'
+                             .format(market_name, exchange_name))
+
+        if exchange_name not in self.collections[market_name]:
+            raise ValueError('exchange {} not in the exchanges for the provided market {}'.format(exchange_name,
+                                                                                                  market_name))
+
+        if len(self.collections[market_name]) > 2:
+            del self.collections[market_name][exchange_name]
+
+        else:
+            del self.collections[market_name]
+
+    def reset_market(self, market_name, exchange_list):
+        self.collections[market_name] = exchange_list
+
+    def update(self, collects: dict):
+        self.collections.update(collects)
+
+    def reset_collections(self, collects):
+        self.collections = collects
+
+    def items(self):
+        return self.collections.items()
+
+    def __iter__(self):
+        return iter(self.collections.keys())
+
+    def __getitem__(self, item):
+        return self.collections[item]
+
+    def __setitem__(self, key, value):
+        self.collections[key] = value
+
+    def __delitem__(self, key):
+        del self.collections[key]
+
+
 class StackSet:
     def __init__(self):
         self.data = []
