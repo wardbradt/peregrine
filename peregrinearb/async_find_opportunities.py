@@ -65,9 +65,9 @@ class OpportunityFinder:
         #     await exchange.close()
         #     return
 
-        self.adapter.info('Closing connection to {}'.format(exchange.id))
+        self.adapter.debug('Closing connection to {}'.format(exchange.id))
         await exchange.close()
-        self.adapter.info('Closed connection to {}'.format(exchange.id))
+        self.adapter.debug('Closed connection to {}'.format(exchange.id))
 
         ask = ticker['ask']
         bid = ticker['bid']

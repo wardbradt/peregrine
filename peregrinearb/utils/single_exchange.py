@@ -93,9 +93,9 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     await asyncio.wait(tasks)
     adapter.info('Added data to graph')
 
-    adapter.info('Closing connection')
+    adapter.debug('Closing connection')
     await exchange.close()
-    adapter.info('Closed connection')
+    adapter.debug('Closed connection')
 
     adapter.info('Loaded exchange graph')
     return graph
