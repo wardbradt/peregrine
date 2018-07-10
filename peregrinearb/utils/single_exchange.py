@@ -88,15 +88,15 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
                 await exchange.load_markets()
             except (ccxt.DDoSProtection, ccxt.RequestTimeout) as e:
                 if i == 19:
-                    adapter.warning('Rate limited on final iteration, raising error', iteration=i)
+                    adapter.warning(format_for_log('Rate limited on final iteration, raising error', iteration=i))
                     raise e
-                adapter.warning('Rate limited when loading markets', iteration=i)
+                adapter.warning(format_for_log('Rate limited when loading markets', iteration=i))
                 await asyncio.sleep(0.1)
             else:
                 break
 
         currency_count = len(exchange.currencies)
-        adapter.info(format_for_log('Loaded markets', iteration=i, marketCount=market_count))
+        adapter.info(format_for_log('Loaded fees', iteration=i, marketCount=market_count))
 
         adapter.info(format_for_log('Adding data to graph', marketCount=market_count, currencyCount=currency_count))
         await add_edges()
@@ -180,8 +180,8 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     fee_scalar = 1 - fee
 
     try:
-        ticker_bid = ticker['bid']
-        ticker_ask = ticker['ask']
+        bid_rate = ticker['bid']
+        ask_rate = ticker['ask']
         if depth:
             bid_volume = ticker['bidVolume']
             ask_volume = ticker['askVolume']
@@ -202,7 +202,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     # Exchanges give asks and bids as either 0 or None when they do not exist.
     # todo: should we account for exchanges upon which an ask exists but a bid does not (and vice versa)? Would this
     # cause bugs?
-    if ticker_ask == 0 or ticker_bid == 0 or ticker_ask is None or ticker_bid is None:
+    if ask_rate == 0 or bid_rate == 0 or ask_rate is None or bid_rate is None:
         adapter.warning(format_for_log('Market is unavailable at this time. It will not be included in the graph.',
                                        market=market_name))
         return
@@ -217,26 +217,27 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
 
     if log:
         if depth:
-            graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
-                           depth=-math.log(bid_volume), market_name=market_name)
-            graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
-                           depth=-math.log(ask_volume * ticker_ask),
-                           market_name=market_name)
+            graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * bid_rate),
+                           depth=-math.log(bid_volume), market_name=market_name, trade_type='SELL',
+                           fee=fee, volume=bid_volume, no_fee_rate=bid_rate)
+            graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ask_rate),
+                           depth=-math.log(ask_volume * ask_rate), market_name=market_name, trade_type='BUY',
+                           fee=fee, volume=ask_volume, no_fee_rate=ask_rate)
         else:
-            graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * ticker_bid),
-                           market_name=market_name)
-            graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ticker_ask),
-                           market_name=market_name)
+            graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * bid_rate),
+                           market_name=market_name, trade_type='SELL', fee=fee, volume=bid_volume, no_fee_rate=bid_rate)
+            graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ask_rate),
+                           market_name=market_name, trade_type='BUY', fee=fee, volume=ask_volume, no_fee_rate=ask_rate)
     else:
         if depth:
-            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid, depth=bid_volume,
-                           market_name=market_name)
-            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask, depth=ask_volume,
-                           market_name=market_name)
+            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * bid_rate, depth=bid_volume,
+                           market_name=market_name, trade_type='SELL', fee=fee, volume=bid_volume, no_fee_rate=bid_rate)
+            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ask_rate, depth=ask_volume,
+                           market_name=market_name, trade_type='BUY', fee=fee, volume=ask_volume, no_fee_rate=ask_rate)
         else:
-            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * ticker_bid,
-                           market_name=market_name)
-            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ticker_ask,
-                           market_name=market_name)
+            graph.add_edge(base_currency, quote_currency, weight=fee_scalar * bid_rate,
+                           market_name=market_name, trade_type='SELL', fee=fee, volume=bid_volume, no_fee_rate=bid_rate)
+            graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ask_rate,
+                           market_name=market_name, trade_type='BUY', fee=fee, volume=ask_volume, no_fee_rate=ask_rate)
 
     adapter.debug(format_for_log('Added edge to graph', market=market_name))

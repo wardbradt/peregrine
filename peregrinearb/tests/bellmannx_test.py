@@ -125,7 +125,7 @@ class TestBellmannx(TestCase):
         G = nx.DiGraph()
         G.add_edge('A', 'B', weight=-math.log(2))
         G.add_edge('B', 'C', weight=-math.log(3))
-        G.add_edge('C', 'A', weight=-math.log(1/4))
+        G.add_edge('C', 'A', weight=-math.log(1 / 4))
         paths = bellman_ford(G, 'A', unique_paths=True, loop_from_source=False)
         path_count = 0
 
@@ -135,3 +135,70 @@ class TestBellmannx(TestCase):
 
         # assert that unique_paths allows for only one path
         self.assertEqual(path_count, 1)
+
+
+class TestCalculateProfitRatioForPath(TestCase):
+
+    def test_calculate_profit_ratio_for_path(self):
+        graph = nx.DiGraph()
+        edges = [
+            # tail node, head node, no_fee_rate, depth (in terms of profited currency), trade_type
+            ['A', 'B', 2, 3, 'SELL'],
+            ['B', 'C', 3, 4, 'SELL'],
+            ['C', 'D', 1 / 7, 14, 'BUY'],
+            ['D', 'E', 0.2, 3 / 2, 'BUY'],
+            ['E', 'F', 4, 3, 'SELL'],
+            ['F', 'G', 6, 0.8, 'BUY'],
+            ['G', 'H', 0.75, 6, 'BUY'],
+            ['H', 'A', 3, 20, 'BUY'],
+        ]
+        fee = 0.01
+
+        for edge in edges:
+            sell = edge[4] == 'SELL'
+            graph.add_edge(
+                edge[0], edge[1], weight=-math.log(edge[2] * (1 - fee)), depth=-math.log(edge[3]), trade_type=edge[4],
+                fee=fee, no_fee_rate=edge[2] if sell else 1 / edge[2],
+                market_name='{}/{}'.format(edge[0], edge[1]) if sell else '{}/{}'.format(edge[1], edge[0])
+            )
+
+        path = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'A']
+        starting_amount = 3
+        ratio, path_data = calculate_profit_ratio_for_path(graph, path, depth=True,
+                                                           starting_amount=starting_amount, gather_path_data=True)
+
+        self.assertEqual(path_data[0]['rate'], 2)
+        self.assertEqual(path_data[0]['volume'], 3)
+        self.assertEqual(path_data[0]['order'], 'SELL')
+
+        self.assertEqual(path_data[1]['rate'], 3)
+        self.assertEqual(path_data[1]['volume'], 4)
+        self.assertEqual(path_data[1]['order'], 'SELL')
+
+        self.assertEqual(path_data[2]['rate'], 7)
+        # AlmostEqual, because of math.log, path_data[2]['volume'] == 1.697142857142857. 11.88 / 7 == 1.6971428571428573
+        self.assertAlmostEqual(path_data[2]['volume'], 11.88 / 7)
+        self.assertEqual(path_data[2]['order'], 'BUY')
+
+        self.assertEqual(path_data[3]['rate'], 5)
+        self.assertEqual(path_data[3]['volume'], 0.3)
+        self.assertEqual(path_data[3]['order'], 'BUY')
+
+        self.assertEqual(path_data[4]['rate'], 4)
+        self.assertEqual(path_data[4]['volume'], 0.297)
+        self.assertEqual(path_data[4]['order'], 'SELL')
+
+        self.assertEqual(path_data[5]['rate'], 1 / 6)
+        # If Equal instead of AlmostEqual, will raise 4.800000000000001 != 4.8
+        self.assertAlmostEqual(path_data[5]['volume'], 4.8)
+        self.assertEqual(path_data[5]['order'], 'BUY')
+
+        self.assertEqual(path_data[6]['rate'], 4 / 3)
+        self.assertAlmostEqual(path_data[6]['volume'], 4.8 * 0.99 * 0.75)
+        self.assertEqual(path_data[6]['order'], 'BUY')
+
+        self.assertEqual(path_data[7]['rate'], 1 / 3)
+        self.assertAlmostEqual(path_data[7]['volume'], 3.564 * 0.99 * 3)
+        self.assertEqual(path_data[7]['order'], 'BUY')
+
+        self.assertAlmostEqual(ratio, 3.564 * 0.99 * 3 * 0.99 / starting_amount)

@@ -349,12 +349,8 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             raise ValueError('keyword arguments for _check_final_condition should contain source. This error'
                              'should never show.')
 
-        # if source_predecessor[]
-
         if self.distance_to[kwargs['source']] < -math.log(self.starting_amount):
-            yield self._retrace_negative_loop(kwargs['source'],
-                                              loop_from_source=False,
-                                              ensure_profit=False)
+            yield self._retrace_negative_loop(kwargs['source'], loop_from_source=False, ensure_profit=False)
 
     def _retrace_negative_loop(self, start, loop_from_source=False, source='', ensure_profit=False, unique_paths=False):
         """
@@ -422,6 +418,7 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
     If gather_path_data, returns a two-tuple where the first element is the profit ratio for the given path and the
     second element is a dict keyed by market symbol and valued by a a dict with 'rate' and 'volume' keys, corresponding
     to the rate and maximum volume for the trade.
+    The volume and rate are always in terms of base currency.
     """
     try:
         adapter = BellmanExchangeAdapter(file_logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
@@ -437,23 +434,25 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
         start = path[i]
         end = path[i + 1]
         if depth:
-            sell = graph[start][end]['market_name'].find(start) == 0
-            rate = math.exp(-graph[start][end]['weight'])
-            volume = min(ratio, math.exp(-graph[start][end]['depth']))
-            if not sell:
-                # because for buy orders, the edge weight in the graph is saved as 1 / lowest ask
-                rate = 1 / rate
-                volume /= rate
+            sell = graph[start][end]['trade_type'] == 'SELL'
 
-            ratio = rate * volume
+            # volume and rate_with_fee are in terms of start, may be base or quote currency.
+            rate_with_fee = math.exp(-graph[start][end]['weight'])
+            volume = min(ratio, math.exp(-graph[start][end]['depth']))
+            ratio = volume * rate_with_fee
 
             if gather_path_data:
+                # for buy orders, put volume in terms of base currency.
+                if not sell:
+                    volume /= graph[start][end]['no_fee_rate']
+
                 path_data.append({'market_name': graph[start][end]['market_name'],
-                                  'rate': rate,
+                                  'rate': graph[start][end]['no_fee_rate'],
+                                  'fee': graph[start][end]['fee'],
                                   # put volume in terms of base currency
                                   'volume': volume,
                                   # if start comes before end in path, this is a sell order.
-                                  'order': 'sell' if sell else 'buy'})
+                                  'order': 'SELL' if sell else 'BUY'})
         else:
             ratio *= math.exp(-graph[start][end]['weight'])
 
