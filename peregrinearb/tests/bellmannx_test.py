@@ -1,6 +1,7 @@
 from unittest import TestCase
 from peregrinearb import bellman_ford_multi, multi_digraph_from_json, multi_digraph_from_dict, \
-    calculate_profit_ratio_for_path, bellman_ford, NegativeWeightFinder, NegativeWeightDepthFinder
+    calculate_profit_ratio_for_path, bellman_ford, NegativeWeightFinder, NegativeWeightDepthFinder, \
+    print_profit_opportunity_for_path
 import json
 import networkx as nx
 import math
@@ -41,6 +42,19 @@ def digraph_from_multi_graph_json(file_name):
                 G.add_edge(node, neighbor, **data_dict)
 
     return G
+
+
+def build_graph_from_edge_list(edges, fee):
+    graph = nx.DiGraph()
+    for edge in edges:
+        sell = edge[4] == 'SELL'
+        graph.add_edge(
+            edge[0], edge[1], weight=-math.log(edge[2] * (1 - fee)), depth=-math.log(edge[3]), trade_type=edge[4],
+            fee=fee, no_fee_rate=edge[2] if sell else 1 / edge[2],
+            market_name='{}/{}'.format(edge[0], edge[1]) if sell else '{}/{}'.format(edge[1], edge[0])
+        )
+
+    return graph
 
 
 class TestBellmanFordMultiGraph(TestCase):
@@ -104,22 +118,40 @@ class TestBellmannx(TestCase):
         """
         Tests NegativeWeightDepthFinder
         """
-        # Tests that a negative loop starting at A cannot exist because the minimum weight of a cycle from and to A
-        # is approximately 0.154, which is the negative log of 6/7.
-        total = 0
-        G = nx.DiGraph()
-        for i in range(1, 7):
-            G.add_edge('A', 'B', weight=-math.log(2), depth=0, market_name='A/B')
-            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2), market_name='B/C')
-            G.add_edge('C', 'A', weight=-math.log(2 / 7), depth=-math.log(i), market_name='C/A')
+        edges = [
+            # tail node, head node, no_fee_rate, depth (in terms of profited currency), trade_type
+            ['A', 'B', 2, 3, 'SELL'],
+            ['B', 'C', 3, 4, 'SELL'],
+            ['C', 'D', 1 / 7, 14, 'BUY'],
+            ['D', 'E', 0.2, 3 / 2, 'BUY'],
+            ['E', 'F', 4, 3, 'SELL'],
+            ['F', 'G', 6, 0.8, 'BUY'],
+            ['G', 'H', 0.75, 6, 'BUY'],
+            ['H', 'A', 0.3, 20, 'BUY'],
+        ]
+        fee = 0.01
 
-            finder = NegativeWeightDepthFinder(G)
+        graph = build_graph_from_edge_list(edges, fee)
+
+        # ratio for the rates from A -> H
+        constant_ratio = 1
+        for edge in edges[:-1]:
+            constant_ratio *= edge[2]
+
+        for i in range(10):
+            edges[-1][2] = 0.3 * (i + 1)
+            finder = NegativeWeightDepthFinder(graph)
             paths = finder.bellman_ford('A')
+
             for path in paths:
-                self.assertAlmostEqual(calculate_profit_ratio_for_path(G, path['loop'], depth=True),
-                                       math.exp(-path['minimum']) * 12 / 7)
-                total += 1
-        self.assertEqual(total, 6)
+                # assert that if a path is found, only one is found.
+                with self.assertRaises(StopIteration):
+                    paths.__next__()
+
+                ratio = calculate_profit_ratio_for_path(graph, path['loop'], depth=True,
+                                                        starting_amount=math.exp(-path['minimum']))
+
+                self.assertAlmostEqual(ratio, constant_ratio * edges[-1][2])
 
     def test_ratio(self):
         G = nx.DiGraph()

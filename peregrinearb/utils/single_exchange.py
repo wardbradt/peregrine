@@ -92,6 +92,12 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
                     raise e
                 adapter.warning(format_for_log('Rate limited when loading markets', iteration=i))
                 await asyncio.sleep(0.1)
+            except ccxt.ExchangeNotAvailable as e:
+                if i == 19:
+                    adapter.warning(format_for_log('Cannot load markets due to ExchangeNotAvailable error, '
+                                                   'graph will not be loaded.', iteration=i))
+                    raise e
+                adapter.warning(format_for_log('Received ExchangeNotAvailable error when loading markets', iteration=i))
             else:
                 break
 

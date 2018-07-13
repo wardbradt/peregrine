@@ -108,3 +108,4 @@ venv.bak/
 # mypy
 .mypy_cache/
 bar.py
+ticker_quotes.json

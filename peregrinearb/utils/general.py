@@ -23,16 +23,12 @@ def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, s
         return
 
     if depth:
-        if starting_amount > math.exp(-path['minimum']):
-            warnings.warn('Parameter starting_amount is greater than maximum possible volume at the source node. Will'
-                          'start with {}'.format(str(math.exp(-path['minimum']))))
-
-            starting_amount = math.exp(-path['minimum'])
+        starting_amount = min(float(starting_amount), math.exp(-path['minimum']))
+        path = path['loop']
 
     print("Starting with {} in {}".format(starting_amount, path[0]))
 
-    for i in range(len(path)):
-        if i + 1 < len(path):
+    for i in range(len(path) - 1):
             start = path[i]
             end = path[i + 1]
 
