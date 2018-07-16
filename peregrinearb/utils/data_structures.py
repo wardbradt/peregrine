@@ -20,7 +20,7 @@ class Collections:
                                                                                                   market_name))
 
         if len(self.collections[market_name]) > 2:
-            del self.collections[market_name][exchange_name]
+            self.collections[market_name].remove(exchange_name)
 
         else:
             del self.collections[market_name]

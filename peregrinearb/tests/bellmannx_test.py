@@ -174,7 +174,7 @@ class TestCalculateProfitRatioForPath(TestCase):
     def test_calculate_profit_ratio_for_path(self):
         graph = nx.DiGraph()
         edges = [
-            # tail node, head node, no_fee_rate, depth (in terms of profited currency), trade_type
+            # tail node, head node, no_fee_rate, depth (in terms of currency traded), trade_type
             ['A', 'B', 2, 3, 'SELL'],
             ['B', 'C', 3, 4, 'SELL'],
             ['C', 'D', 1 / 7, 14, 'BUY'],
