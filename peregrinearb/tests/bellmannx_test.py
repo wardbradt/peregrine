@@ -200,9 +200,6 @@ class TestCalculateProfitRatioForPath(TestCase):
         ratio, path_data = calculate_profit_ratio_for_path(graph, path, depth=True,
                                                            starting_amount=starting_amount, gather_path_data=True)
 
-        for p in path_data:
-            print(p)
-
         self.assertEqual(path_data[0]['rate'], 2)
         self.assertEqual(path_data[0]['volume'], 3)
         self.assertEqual(path_data[0]['order'], 'SELL')
