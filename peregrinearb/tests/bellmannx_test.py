@@ -131,15 +131,16 @@ class TestBellmannx(TestCase):
         ]
         fee = 0.01
 
-        graph = build_graph_from_edge_list(edges, fee)
-
         # ratio for the rates from A -> H
-        constant_ratio = 1
-        for edge in edges[:-1]:
-            constant_ratio *= edge[2]
+        def get_edge_ratio():
+            constant_ratio = 1
+            for edge in edges:
+                constant_ratio *= edge[2] * (1 - fee)
+            return constant_ratio
 
         for i in range(10):
             edges[-1][2] = 0.3 * (i + 1)
+            graph = build_graph_from_edge_list(edges, fee)
             finder = NegativeWeightDepthFinder(graph)
             paths = finder.bellman_ford('A')
 
@@ -151,7 +152,7 @@ class TestBellmannx(TestCase):
                 ratio = calculate_profit_ratio_for_path(graph, path['loop'], depth=True,
                                                         starting_amount=math.exp(-path['minimum']))
 
-                self.assertAlmostEqual(ratio, constant_ratio * edges[-1][2])
+                self.assertAlmostEqual(ratio, get_edge_ratio())
 
     def test_ratio(self):
         G = nx.DiGraph()
@@ -198,6 +199,9 @@ class TestCalculateProfitRatioForPath(TestCase):
         starting_amount = 3
         ratio, path_data = calculate_profit_ratio_for_path(graph, path, depth=True,
                                                            starting_amount=starting_amount, gather_path_data=True)
+
+        for p in path_data:
+            print(p)
 
         self.assertEqual(path_data[0]['rate'], 2)
         self.assertEqual(path_data[0]['volume'], 3)
