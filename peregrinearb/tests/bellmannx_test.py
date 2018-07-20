@@ -94,30 +94,32 @@ class TestBellmannx(TestCase):
         """
         Does not work, as this parameter (ensure_profit) was deprecated
         """
-        graph = nx.DiGraph()
-        graph.add_edge(0, 1, weight=4)
-        graph.add_edge(1, 0, weight=3)
-        graph.add_edge(1, 2, weight=-1)
-        graph.add_edge(2, 3, weight=-1)
-        graph.add_edge(3, 1, weight=-1)
-        paths = bellman_ford(graph, 0, loop_from_source=True, ensure_profit=True)
-        for path in paths:
-            weight = 0
-            for i in range(len(path) - 1):
-                weight += graph[path[i]][path[i + 1]]['weight']
-            self.assertLess(weight, 0)
+        pass
+        # graph = nx.DiGraph()
+        # graph.add_edge(0, 1, weight=4)
+        # graph.add_edge(1, 0, weight=3)
+        # graph.add_edge(1, 2, weight=-1)
+        # graph.add_edge(2, 3, weight=-1)
+        # graph.add_edge(3, 1, weight=-1)
+        # paths = bellman_ford(graph, 0, loop_from_source=True, ensure_profit=True)
+        # for path in paths:
+        #     weight = 0
+        #     for i in range(len(path) - 1):
+        #         weight += graph[path[i]][path[i + 1]]['weight']
+        #     self.assertLess(weight, 0)
+        #
+        # for i in range(6, 8):
+        #     G = nx.DiGraph()
+        #     G.add_edge('A', 'B', weight=-math.log(2), depth=0)
+        #     G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
+        #     G.add_edge('C', 'A', weight=-math.log(1 / 4), depth=-math.log(i))
+        #     paths = bellman_ford(G, 'A', unique_paths=True)
 
-        for i in range(6, 8):
-            G = nx.DiGraph()
-            G.add_edge('A', 'B', weight=-math.log(2), depth=0)
-            G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
-            G.add_edge('C', 'A', weight=-math.log(1 / 4), depth=-math.log(i))
-            paths = bellman_ford(G, 'A', unique_paths=True)
-
-    def test_true_depth(self):
+    def test_negative_weight_depth(self):
         """
         Tests NegativeWeightDepthFinder
         """
+        final_edge_weight = 0.25
         edges = [
             # tail node, head node, no_fee_rate, depth (in terms of profited currency), trade_type
             ['A', 'B', 2, 3, 'SELL'],
@@ -127,7 +129,7 @@ class TestBellmannx(TestCase):
             ['E', 'F', 4, 3, 'SELL'],
             ['F', 'G', 6, 0.8, 'BUY'],
             ['G', 'H', 0.75, 6, 'BUY'],
-            ['H', 'A', 0.3, 20, 'BUY'],
+            ['H', 'A', final_edge_weight, 20, 'BUY'],
         ]
         fee = 0.01
 
@@ -139,10 +141,15 @@ class TestBellmannx(TestCase):
             return constant_ratio
 
         for i in range(10):
-            edges[-1][2] = 0.3 * (i + 1)
+            edges[-1][2] = final_edge_weight * (i + 1)
             graph = build_graph_from_edge_list(edges, fee)
             finder = NegativeWeightDepthFinder(graph)
             paths = finder.bellman_ford('A')
+
+            edge_ratio = get_edge_ratio()
+            if edge_ratio <= 1:
+                with self.assertRaises(StopIteration):
+                    paths.__next__()
 
             for path in paths:
                 # assert that if a path is found, only one is found.
@@ -152,7 +159,7 @@ class TestBellmannx(TestCase):
                 ratio = calculate_profit_ratio_for_path(graph, path['loop'], depth=True,
                                                         starting_amount=math.exp(-path['minimum']))
 
-                self.assertAlmostEqual(ratio, get_edge_ratio())
+                self.assertAlmostEqual(ratio, edge_ratio)
 
     def test_ratio(self):
         G = nx.DiGraph()
