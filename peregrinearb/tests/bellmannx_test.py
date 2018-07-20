@@ -5,6 +5,7 @@ from peregrinearb import bellman_ford_multi, multi_digraph_from_json, multi_digr
 import json
 import networkx as nx
 import math
+import random
 
 
 def graph_from_dict(graph_dict):
@@ -115,7 +116,7 @@ class TestBellmannx(TestCase):
         #     G.add_edge('C', 'A', weight=-math.log(1 / 4), depth=-math.log(i))
         #     paths = bellman_ford(G, 'A', unique_paths=True)
 
-    def test_negative_weight_depth(self):
+    def test_negative_weight_depth_finder(self):
         """
         Tests NegativeWeightDepthFinder
         """
@@ -160,6 +161,43 @@ class TestBellmannx(TestCase):
                                                         starting_amount=math.exp(-path['minimum']))
 
                 self.assertAlmostEqual(ratio, edge_ratio)
+
+    def test_negative_weight_depth_finder_b(self):
+        """
+        Another test for NegativeWeightDepthFinder
+        """
+        node_count = 30
+        complete_graph = nx.complete_graph(node_count)
+        graph = nx.DiGraph()
+        for edge in complete_graph.edges():
+            # Only use 1 / 3 of the edges, but use all edges connected to 0 to ensure all nodes reachable
+            if random.random() < 2 / 3 and not (edge[0] == 0 or edge[1] == 0):
+                continue
+
+            random_weight = random.uniform(-10, 6)
+            random_depth = random.uniform(0, 15)
+            random_depth_b = random.uniform(-15, 0)
+            if random_weight < 0:
+                random_depth *= -1
+                random_depth_b *= -1
+            graph.add_edge(edge[0], edge[1], weight=random_weight, depth=random_depth)
+            graph.add_edge(edge[1], edge[0], weight=-random_weight, depth=-random_depth_b)
+
+        finder = NegativeWeightDepthFinder(graph)
+        # does not matter which source is used, can be any number from 0 to 49. we use 0.
+        paths = finder.bellman_ford(0)
+
+        def calculate_ratio(found_path):
+            total = 0
+            for i in range(len(found_path) - 1):
+                start = found_path[i]
+                end = found_path[i + 1]
+                total += graph[start][end]['weight']
+            return total
+
+        for path in paths:
+            ratio = calculate_ratio(path['loop'])
+            self.assertLess(ratio, 0.0)
 
     def test_ratio(self):
         G = nx.DiGraph()

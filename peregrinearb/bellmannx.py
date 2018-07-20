@@ -285,25 +285,6 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             self.adapter = BellmanExchangeAdapter(logger, {'exchange': '',
                                                            'count': invocation_id})
 
-    def _check_final_condition(self, **kwargs):
-        """
-        The final condition is if a negative loop exists which contains kwargs['source']. This is checked by seeing if
-        self.distance_to[kwargs['source']] < 0. If true, yields that negative cycle.
-        :return: a generator of negatively weighted cycle paths
-        """
-        for edge in self.graph.edges(data=True):
-            if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                try:
-                    path = self._retrace_negative_loop(edge[1],
-                                                       loop_from_source=kwargs['loop_from_source'],
-                                                       source=kwargs['source'],
-                                                       ensure_profit=kwargs['ensure_profit'],
-                                                       unique_paths=kwargs['unique_paths'])
-                except SeenNodeError:
-                    continue
-
-                yield path
-
     def _retrace_negative_loop(self, start, loop_from_source=False, source='', ensure_profit=False, unique_paths=False):
         """
         Unlike NegativeWeightFinder's _retrace_negative_loop, this returns a dict structured as
@@ -327,7 +308,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         arbitrage_loop.insert(0, prior_node)
         while True:
             if arbitrage_loop[0] in self.seen_nodes and unique_paths:
-                raise SeenNodeError()
+                raise SeenNodeError
             self.seen_nodes.add(prior_node)
 
             prior_node = self.predecessor_to[arbitrage_loop[0]].pop()[1]
@@ -340,11 +321,15 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             elif edge_weight + edge_depth > minimum:
                 minimum = edge_depth
 
-            arbitrage_loop.insert(0, prior_node)
-
-            if prior_node == arbitrage_loop[-1]:
+            if prior_node in arbitrage_loop:
+                if arbitrage_loop.index(prior_node) == 1:
+                    print('foo')
+                arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, prior_node) + 1]
+                arbitrage_loop.insert(0, prior_node)
                 self.adapter.info('Retraced loop')
                 return {'loop': arbitrage_loop, 'minimum': minimum}
+
+            arbitrage_loop.insert(0, prior_node)
 
 
 def bellman_ford(graph, source, loop_from_source=False, ensure_profit=False, unique_paths=False):
