@@ -231,9 +231,9 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
                            fee=fee, volume=ask_volume, no_fee_rate=ask_rate)
         else:
             graph.add_edge(base_currency, quote_currency, weight=-math.log(fee_scalar * bid_rate),
-                           market_name=market_name, trade_type='SELL', fee=fee, volume=bid_volume, no_fee_rate=bid_rate)
+                           market_name=market_name, trade_type='SELL', fee=fee, no_fee_rate=bid_rate)
             graph.add_edge(quote_currency, base_currency, weight=-math.log(fee_scalar * 1 / ask_rate),
-                           market_name=market_name, trade_type='BUY', fee=fee, volume=ask_volume, no_fee_rate=ask_rate)
+                           market_name=market_name, trade_type='BUY', fee=fee, no_fee_rate=ask_rate)
     else:
         if depth:
             graph.add_edge(base_currency, quote_currency, weight=fee_scalar * bid_rate, depth=bid_volume,
@@ -242,8 +242,8 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
                            market_name=market_name, trade_type='BUY', fee=fee, volume=ask_volume, no_fee_rate=ask_rate)
         else:
             graph.add_edge(base_currency, quote_currency, weight=fee_scalar * bid_rate,
-                           market_name=market_name, trade_type='SELL', fee=fee, volume=bid_volume, no_fee_rate=bid_rate)
+                           market_name=market_name, trade_type='SELL', fee=fee, no_fee_rate=bid_rate)
             graph.add_edge(quote_currency, base_currency, weight=fee_scalar * 1 / ask_rate,
-                           market_name=market_name, trade_type='BUY', fee=fee, volume=ask_volume, no_fee_rate=ask_rate)
+                           market_name=market_name, trade_type='BUY', fee=fee, no_fee_rate=ask_rate)
 
     adapter.debug(format_for_log('Added edge to graph', market=market_name))
