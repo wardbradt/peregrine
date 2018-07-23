@@ -71,7 +71,7 @@ class TestBellmanFordMultiGraph(TestCase):
     def test_positive_ratio(self):
         graph = multi_digraph_from_json('test_multigraph.json')
         for node in graph:
-            new_graph, paths = bellman_ford_multi(graph, node, loop_from_source=False)
+            new_graph, paths = bellman_ford_multi(graph, node)
             for path in paths:
                 if path:
                     # assert that the path is a negative weight cycle
@@ -79,42 +79,8 @@ class TestBellmanFordMultiGraph(TestCase):
                     # python float precision may round some numbers to 1.0.
                     self.assertGreaterEqual(ratio, 1.0)
 
-    def test_loop_from_source(self):
-        graph = multi_digraph_from_json('test_multigraph.json')
-        for node in graph:
-            new_graph, paths = bellman_ford_multi(graph, node, loop_from_source=True)
-            for path in paths:
-                if path:
-                    self.assertEqual(path[0], path[-1])
-                    self.assertEqual(node, path[0])
-
 
 class TestBellmannx(TestCase):
-
-    def test_ensure_profit_yields_profit(self):
-        """
-        Does not work, as this parameter (ensure_profit) was deprecated
-        """
-        pass
-        # graph = nx.DiGraph()
-        # graph.add_edge(0, 1, weight=4)
-        # graph.add_edge(1, 0, weight=3)
-        # graph.add_edge(1, 2, weight=-1)
-        # graph.add_edge(2, 3, weight=-1)
-        # graph.add_edge(3, 1, weight=-1)
-        # paths = bellman_ford(graph, 0, loop_from_source=True, ensure_profit=True)
-        # for path in paths:
-        #     weight = 0
-        #     for i in range(len(path) - 1):
-        #         weight += graph[path[i]][path[i + 1]]['weight']
-        #     self.assertLess(weight, 0)
-        #
-        # for i in range(6, 8):
-        #     G = nx.DiGraph()
-        #     G.add_edge('A', 'B', weight=-math.log(2), depth=0)
-        #     G.add_edge('B', 'C', weight=-math.log(3), depth=-math.log(2))
-        #     G.add_edge('C', 'A', weight=-math.log(1 / 4), depth=-math.log(i))
-        #     paths = bellman_ford(G, 'A', unique_paths=True)
 
     def test_negative_weight_depth_finder(self):
         """
@@ -204,7 +170,7 @@ class TestBellmannx(TestCase):
         G.add_edge('A', 'B', weight=-math.log(2))
         G.add_edge('B', 'C', weight=-math.log(3))
         G.add_edge('C', 'A', weight=-math.log(1 / 4))
-        paths = bellman_ford(G, 'A', unique_paths=True, loop_from_source=False)
+        paths = bellman_ford(G, 'A', unique_paths=True)
         path_count = 0
 
         for path in paths:
