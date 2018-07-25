@@ -101,9 +101,9 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
             else:
                 break
 
-        currency_count = len(exchange.currencies)
         adapter.info(format_for_log('Loaded fees', iteration=i, marketCount=market_count))
 
+        currency_count = len(exchange.currencies)
         adapter.info(format_for_log('Adding data to graph', marketCount=market_count, currencyCount=currency_count))
         await add_edges()
         adapter.info(format_for_log('Added data to graph', marketCount=market_count, currencyCount=currency_count))
@@ -157,7 +157,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     :param depth: If True, also adds an attribute 'depth' to each edge which represents the current volume of orders
     available at the price represented by the 'weight' attribute of each edge.
     """
-    adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange})
+    adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
     adapter.debug(format_for_log('Adding edge to graph', market=market_name))
     if ticker is None:
         try:
