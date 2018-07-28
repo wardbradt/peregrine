@@ -157,6 +157,7 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     :param depth: If True, also adds an attribute 'depth' to each edge which represents the current volume of orders
     available at the price represented by the 'weight' attribute of each edge.
     """
+    # optimization todo: should not instantiate a new adapter on every call
     adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
     adapter.debug(format_for_log('Adding edge to graph', market=market_name))
     if ticker is None:
