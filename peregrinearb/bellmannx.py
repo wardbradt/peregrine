@@ -190,8 +190,6 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
                 minimum = edge_depth
 
             if prior_node in arbitrage_loop:
-                if arbitrage_loop.index(prior_node) == 1:
-                    print('foo')
                 arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, prior_node) + 1]
                 arbitrage_loop.insert(0, prior_node)
                 self.adapter.info('Retraced loop')
