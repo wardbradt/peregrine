@@ -75,8 +75,8 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     adapter.debug('Initialized empty graph with exchange_name and timestamp attributes')
 
     async def add_edges():
-        tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, log=True, fees=fees, suppress=suppress,
-                                             ticker=ticker, depth=depth, invocation_id=invocation_id)
+        tasks = [_add_weighted_edge_to_graph(exchange, market_name, graph, adapter, log=True, fees=fees,
+                                             suppress=suppress, ticker=ticker, depth=depth, )
                  for market_name, ticker in tickers.items()]
         await asyncio.wait(tasks)
 
@@ -121,17 +121,19 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
 
 
 async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=True, fees=False, suppress=None,
-                                  depth=False) -> nx.DiGraph:
+                                  depth=False, invocation_id=0) -> nx.DiGraph:
     """
     Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
     edges)
     """
     if suppress is None:
         suppress = ['markets']
+    adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
+
     result = nx.DiGraph()
 
-    tasks = [_add_weighted_edge_to_graph(exchange, edge[2]['market_name'], result, log, fees=fees, suppress=suppress,
-                                         depth=depth)
+    tasks = [_add_weighted_edge_to_graph(exchange, edge[2]['market_name'], result, adapter, log=log,
+                                         fees=fees, suppress=suppress, depth=depth)
              for edge in graph.edges(data=True)]
     await asyncio.wait(tasks)
     await exchange.close()
@@ -139,8 +141,8 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
     return result
 
 
-async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, log=True,
-                                      fees=False, suppress=None, ticker=None, depth=False, invocation_id=0):
+async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str, graph: nx.DiGraph, adapter, log=True,
+                                      fees=False, suppress=None, ticker=None, depth=False, ):
     """
     todo: add global variable to bid_volume/ ask_volume to see if all tickers (for a given exchange) have value == None
     Returns a Networkx DiGraph populated with the current ask and bid prices for each market in graph (represented by
@@ -157,12 +159,12 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     :param depth: If True, also adds an attribute 'depth' to each edge which represents the current volume of orders
     available at the price represented by the 'weight' attribute of each edge.
     """
-    # optimization todo: should not instantiate a new adapter on every call
-    adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
     adapter.debug(format_for_log('Adding edge to graph', market=market_name))
     if ticker is None:
         try:
+            adapter.info(format_for_log('Fetching ticker', market=market_name))
             ticker = await exchange.fetch_ticker(market_name)
+            adapter.info(format_for_log('Fetched ticker', market=market_name))
         # any error is solely because of fetch_ticker
         except:
             if 'markets' not in suppress:
