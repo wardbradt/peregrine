@@ -1,6 +1,6 @@
 import math
 import networkx as nx
-from .utils import last_index_in_list
+from .utils import last_index_in_list, format_for_log
 import asyncio
 from .utils import load_exchange_graph
 import logging
@@ -82,7 +82,7 @@ class NegativeWeightFinder:
 
         paths = self._check_final_condition(unique_paths=unique_paths)
 
-        self.adapter.info('Ran bellman_ford for exchange')
+        self.adapter.info('Ran bellman_ford')
         return paths
 
     def _check_final_condition(self, **kwargs):
@@ -100,6 +100,7 @@ class NegativeWeightFinder:
         is helpful to describe in the docstring what the final condition is and, if not negative cycles, what the
         method's returned generator yields.
         """
+        self.adapter.info('Retracing loops')
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 try:
@@ -107,6 +108,7 @@ class NegativeWeightFinder:
                 except SeenNodeError:
                     continue
 
+                self.adapter.info(format_for_log('Yielding path', path=str(path)))
                 yield path
 
     def relax(self, edge):
@@ -167,7 +169,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         if unique_paths and start in self.seen_nodes:
             raise SeenNodeError
 
-        self.adapter.info('Retracing loop')
+        self.adapter.debug('Retracing loop')
 
         arbitrage_loop = [start]
         prior_node = self.predecessor_to[arbitrage_loop[0]]
