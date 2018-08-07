@@ -106,6 +106,7 @@ class NegativeWeightFinder:
                 try:
                     path = self._retrace_negative_loop(edge[1], unique_paths=kwargs['unique_paths'])
                 except SeenNodeError:
+                    self.adapter.debug('SeenNodeError raised')
                     continue
 
                 self.adapter.info(format_for_log('Yielding path', path=str(path)))
@@ -125,7 +126,6 @@ class NegativeWeightFinder:
         """
         :return: negative loop path
         """
-
         if unique_paths and start in self.seen_nodes:
             raise SeenNodeError
 

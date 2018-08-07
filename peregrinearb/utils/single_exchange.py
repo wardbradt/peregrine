@@ -6,6 +6,7 @@ import datetime
 import logging
 from peregrinearb.settings import LOGGING_PATH
 from peregrinearb.utils import format_for_log
+from django.utils import timezone
 
 
 class LoadExchangeGraphAdapter(logging.LoggerAdapter):
@@ -71,7 +72,7 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
 
     # todo: get exchange's server time?
     graph.graph['exchange_name'] = exchange.id
-    graph.graph['timestamp'] = datetime.datetime.now()
+    graph.graph['datetime'] = datetime.datetime.now(tz=timezone.utc)
     adapter.debug('Initialized empty graph with exchange_name and timestamp attributes')
 
     async def add_edges():
