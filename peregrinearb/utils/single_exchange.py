@@ -176,6 +176,8 @@ async def _add_weighted_edge_to_graph(exchange: ccxt.Exchange, market_name: str,
     if fees:
         if 'taker' in exchange.markets[market_name]:
             # we always take the taker side because arbitrage depends on filling orders
+            # sell_fee_dict = exchange.calculate_fee(market_name, 'limit', 'sell', 0, 0, 'taker')
+            # buy_fee_dict = exchange.calculate_fee(market_name, 'limit', 'buy', 0, 0, 'taker')
             fee = exchange.markets[market_name]['taker']
         else:
             if 'fees' not in suppress:

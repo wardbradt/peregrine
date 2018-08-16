@@ -259,7 +259,6 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
                 path_data.append({'market_name': graph[start][end]['market_name'],
                                   'rate': graph[start][end]['no_fee_rate'],
                                   'fee': graph[start][end]['fee'],
-                                  # put volume in terms of base currency
                                   'volume': volume,
                                   # todo: change order and its usages to type
                                   # if start comes before end in path, this is a sell order.

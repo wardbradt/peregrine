@@ -101,7 +101,8 @@ class SuperInterExchangeAdapter(logging.LoggerAdapter):
 
 class SuperOpportunityFinder:
 
-    def __init__(self, exchanges, collections, name=True, invocation_id=0, opportunity_id=0):
+    def __init__(self, exchanges, collections, name=True, invocation_id=0, opportunity_id=0, get_usd_rates=False,
+                 opportunity_interval=0.05):
         """
         SuperOpportunityFinder, given a dict of collections, yields opportunities in the order they come. There is not
         enough overlap between SuperOpportunityFinder and OpportunityFinder to warrant inheritance.
@@ -129,6 +130,8 @@ class SuperOpportunityFinder:
         # starting opportunity id for logging
         self.opportunity_id = opportunity_id
         self.usd_rates = {}
+        self.get_usd_rates = get_usd_rates
+        self.opportunity_interval = opportunity_interval
 
     async def get_opportunities(self, price_markets=None):
         """
@@ -173,7 +176,7 @@ class SuperOpportunityFinder:
         self._find_opportunity_calls += 1
         self.opportunity_id += 1
         current_opp_id = self.opportunity_id
-        await asyncio.sleep(0.02 * self._find_opportunity_calls)
+        await asyncio.sleep(self.opportunity_interval * self._find_opportunity_calls)
         # Try again in 100 milliseconds if any of the exchanges in exchange_list are currently rate limited.
         for e in exchange_list:
             if e in self.rate_limited_exchanges:
@@ -183,7 +186,7 @@ class SuperOpportunityFinder:
         if return_prices:
             prices = {}
 
-        self.adapter.info(format_for_log('Finding opportunity', opportunity=current_opp_id, market=market_name))
+        self.adapter.info(format_for_log('Finding opportunity', opportunity=current_opp_id, market=market_name, ))
         opportunity = {
             'highest_bid': {'price': -1, 'exchange': None, 'volume': 0},
             'lowest_ask': {'price': float('Inf'), 'exchange': None, 'volume': 0},
@@ -199,8 +202,7 @@ class SuperOpportunityFinder:
             # If the order book's volume was too low or fetch_ticker raised ExchangeError or ExchangeNotAvailable
             if exchange_name is None:
                 continue
-            # Cannot catch Exception at this level because of asyncio, so if ticker is None, that means there was either
-            # a RequestTimeout or DDosProtection error.
+            # If ticker is None, that means that there was either a RequestTimeout or DDosProtection error.
             if order_book is None:
                 self.rate_limited_exchanges.add(exchange_name)
                 await asyncio.sleep(0.2)
@@ -242,6 +244,8 @@ class SuperOpportunityFinder:
     async def _exchange_fetch_order_book(self, exchange_name, market_name, current_opp_id):
         """
         Returns a two-tuple structured as (ticker, exchange_name)
+        ticker is None if an order book with bids and asks was not returned by fetch_order_book
+        exchange_name is None if an unavoidable error was raised or the order book has no bids or no asks
         """
         self.adapter.debug(format_for_log('Fetching ticker', opportunity=current_opp_id,
                                           exchange=exchange_name, market=market_name))
@@ -265,6 +269,8 @@ class SuperOpportunityFinder:
                                                 opportunity=current_opp_id,
                                                 exchange=exchange_name,
                                                 market=market_name))
+            self.adapter.info(format_for_log('Removing exchange from market', exchange=exchange_name,
+                                             market=market_name, opportunity=current_opp_id, ))
             self.collections.remove_exchange_from_market(exchange_name, market_name)
             return None, None
         except ccxt.ExchangeNotAvailable:
@@ -278,10 +284,11 @@ class SuperOpportunityFinder:
             self.adapter.debug(format_for_log('No asks or no bids', exchange=exchange_name, market=market_name))
             return None, None
 
-        cap_currency_index = market_name.find('USD')
-        # if self.cap_currency is the quote currency
-        if cap_currency_index > 0:
-            self._add_to_rates_dict(exchange_name, market_name, order_book['bids'][0][0])
+        if self.get_usd_rates:
+            cap_currency_index = market_name.find('USD')
+            # if self.cap_currency is the quote currency
+            if cap_currency_index > 0:
+                self._add_to_rates_dict(exchange_name, market_name, order_book['bids'][0][0])
 
         self.adapter.debug(format_for_log('Fetched ticker', opportunity=current_opp_id, exchange=exchange_name,
                                           market=market_name))

@@ -1,6 +1,6 @@
 from unittest import TestCase
 from peregrinearb.async_build_markets import build_all_collections, build_specific_collections, build_collections, \
-    build_arbitrage_graph_for_exchanges
+    build_arbitrage_graph_for_exchanges, SymbolCollectionBuilder
 import ccxt.async as ccxt
 import asyncio
 
@@ -89,3 +89,67 @@ class TestExchangeGraphBuilder(TestCase):
             data = edge[2]
             exchange = exchanges[data['exchange_name']]
             self.assertIn(data['market_name'], exchange.symbols)
+
+
+class TestExchange(ccxt.Exchange):
+
+    def __init__(self, name='', markets=None):
+        if markets is None:
+            markets = {}
+        self.markets = markets
+        self.id = name
+
+    @property
+    def symbols(self):
+        return self.markets.keys()
+
+    @property
+    def currencies(self):
+        result = set()
+        for market in self.markets:
+            try:
+                base, quote = market.split('/')
+            except ValueError:
+                continue
+            result.add(base)
+            result.add(quote)
+        return result
+
+    async def load_markets(self, reload=False):
+        pass
+
+
+class SymbolCollectionBuilderTestCase(TestCase):
+
+    def test_add_exchange_to_symbol(self):
+        exchange_a = TestExchange(name='a', )
+        exchange_b = TestExchange(name='b', )
+
+        builder = SymbolCollectionBuilder([exchange_a, exchange_b], )
+        self.assertEqual(builder.collections, {})
+        builder._add_exchange_to_symbol('A/B', 'a')
+        self.assertEqual(builder.collections, {'A/B': ['a']})
+        builder._add_exchange_to_symbol('A/B', 'a')
+        self.assertEqual(builder.collections, {'A/B': ['a']})
+
+        builder._add_exchange_to_symbol('A/B', 'b')
+        self.assertEqual(builder.collections, {'A/B': ['a', 'b']})
+
+        builder._add_exchange_to_symbol('B/C', 'b')
+        self.assertEqual(builder.collections, {'A/B': ['a', 'b'], 'B/C': ['b']})
+
+        asyncio.get_event_loop().run_until_complete(exchange_a.close())
+        asyncio.get_event_loop().run_until_complete(exchange_b.close())
+
+    def test_add_exchange_to_collections(self):
+        exchange_a = TestExchange(name='a', markets={sym: {} for sym in ['A/B', 'A/C', 'B/C', 'E/C']})
+        exchange_b = TestExchange(name='b', markets={sym: {} for sym in ['A/B', 'D/C', 'B/C', 'E/A', 'A/X']})
+
+        builder = SymbolCollectionBuilder([exchange_a, exchange_b],
+                                          symbols=['D/C'],
+                                          exclusive_currencies=['B', 'X', 'C'],
+                                          inclusive_currencies=['D'], )
+
+        result = asyncio.get_event_loop().run_until_complete(builder.async_build_all_collections(write=False, ))
+        print(result)
+        self.assertEqual(result, {'B/C': ['a', 'b'], 'D/C': ['b']})

@@ -13,7 +13,13 @@ def format_for_log(msg, **kwargs):
     result = ''
     for key, value in kwargs.items():
         key = str(key).capitalize()
-        result += '{}#{} - '.format(key, value)
+        # if key is not Labels or if the value for labels is not a list
+        if key.upper() != 'LABELS' or type(value) != list:
+            result += '{}#{} - '.format(key, value)
+        else:
+            for label in value:
+                result += format_for_log('', label=label, )
+
     result += msg
     return result
 

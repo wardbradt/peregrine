@@ -12,6 +12,7 @@ def graph_from_dict(graph_dict):
     if 'graph_type' not in graph_dict:
         raise ValueError('graph_dict must contain key "graph_type"')
 
+    # todo: use type() instead of this mess
     if graph_dict['graph_type'] == 'MultiDiGraph':
         return multi_digraph_from_dict(graph_dict['graph_dict'])
     elif graph_dict['graph_type'] == 'MultiGraph':
