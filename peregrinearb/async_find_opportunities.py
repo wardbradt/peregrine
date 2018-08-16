@@ -133,7 +133,7 @@ class SuperOpportunityFinder:
         self.get_usd_rates = get_usd_rates
         self.opportunity_interval = opportunity_interval
 
-    async def get_opportunities(self, price_markets=None):
+    async def get_opportunities(self, price_markets=None, close=True, ):
         """
         :param price_markets: Optional. If you would like to first return the prices for the markets in price_markets
         and the corresponding opportunities before finding other opportunities.
@@ -151,6 +151,7 @@ class SuperOpportunityFinder:
             tasks = []
             for market in price_markets:
                 tasks.append(self._find_opportunity(market, self.collections[market], True))
+                # todo: add if market in price_markets to _find_opportunity. deleting from collections is bad.
                 del collections[market]
             for result in asyncio.as_completed(tasks):
                 yield await result
@@ -163,8 +164,9 @@ class SuperOpportunityFinder:
         for result in asyncio.as_completed(tasks):
             yield await result
 
-        tasks = [e.close() for e in self.exchanges.values()]
-        await asyncio.wait(tasks)
+        if close:
+            tasks = [e.close() for e in self.exchanges.values()]
+            await asyncio.wait(tasks)
         self.adapter.info('Yielded all inter-exchange opportunities.')
 
     async def _find_opportunity(self, market_name, exchange_list, return_prices=False):
@@ -180,6 +182,8 @@ class SuperOpportunityFinder:
         # Try again in 100 milliseconds if any of the exchanges in exchange_list are currently rate limited.
         for e in exchange_list:
             if e in self.rate_limited_exchanges:
+                self.adapter.info(format_for_log('Sleeping asynchronously because exchange was rate limited',
+                                                 exchange=e, sleeptime=0.1, ))
                 await asyncio.sleep(0.1)
                 return await self._find_opportunity(market_name, exchange_list)
 

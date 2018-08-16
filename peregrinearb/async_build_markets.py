@@ -77,7 +77,6 @@ class SymbolCollectionBuilder(CollectionBuilder):
     def __init__(self, exchanges: list=None, symbols: list=None, exclusive_currencies: list=None,
                  inclusive_currencies: list = None):
         """
-
         :param symbols: symbols which should be added to the collections
         :param exclusive_currencies: currencies for which markets should be fetched if the paired currency is also
         in exclusive_currencies
