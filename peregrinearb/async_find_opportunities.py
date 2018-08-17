@@ -2,12 +2,12 @@ import ccxt.async as ccxt
 from .async_build_markets import get_exchanges_for_market
 import asyncio
 import logging
-from .settings import LOGGING_PATH
+from .settings import INTER_LOGGING_PATH
 import datetime
 from .utils import format_for_log, Collections
 
 
-file_logger = logging.getLogger(LOGGING_PATH + __name__)
+file_logger = logging.getLogger(INTER_LOGGING_PATH + __name__)
 
 
 class InterExchangeAdapter(logging.LoggerAdapter):
@@ -27,7 +27,7 @@ class OpportunityFinder:
         cryptocurrency market by finding the exchange with the lowest market ask price and the exchange with the
         highest market bid price.
         """
-        logger = logging.getLogger(LOGGING_PATH + __name__)
+        logger = logging.getLogger(INTER_LOGGING_PATH + __name__)
         self.adapter = InterExchangeAdapter(logger, {'invocation_id': invocation_id, 'market': market_name})
         self.adapter.debug('Initializing OpportunityFinder for {}'.format(market_name))
 
@@ -116,7 +116,7 @@ class SuperOpportunityFinder:
         self.collections field will be a Collections object.
         :param name: True if exchanges is a list of strings, False if it is a list of ccxt.Exchange objects
         """
-        logger = logging.getLogger(LOGGING_PATH + __name__)
+        logger = logging.getLogger(INTER_LOGGING_PATH + __name__)
         self.adapter = SuperInterExchangeAdapter(logger, {'invocation_id': invocation_id})
         self.adapter.debug('Initializing SuperOpportunityFinder')
         if name:
