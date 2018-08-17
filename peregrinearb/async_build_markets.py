@@ -98,7 +98,6 @@ class SymbolCollectionBuilder(CollectionBuilder):
     async def _add_exchange_to_collections(self, exchange: ccxt.Exchange, ccxt_errors=True, ):
         try:
             await exchange.load_markets()
-            await exchange.close()
         except ccxt.BaseError as e:
             if ccxt_errors:
                 await exchange.close()
