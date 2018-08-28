@@ -2,7 +2,7 @@
 
 A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries on over 38,000 trading pairs
 
-## A Note on Development
+## A Note
 I am currently unable to continue the development of peregrine in this repository. I will respond to [issues](https://github.com/wardbradt/peregrine/issues) when I have time to but likely will notcontribute to the codebase. If you have a question, do not hesitate to ask. For anyone interested in this project, note that this README is not up to date with the code; there are several large features not described here.
 
 ## Installation
