@@ -1,7 +1,7 @@
 import asyncio
 import math
 import networkx as nx
-from ccxt import async_support as ccxt
+import ccxt.async_support as ccxt
 import datetime
 import logging
 from peregrinearb.settings import LOGGING_PATH
