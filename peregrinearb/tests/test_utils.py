@@ -1,7 +1,7 @@
 from unittest import TestCase
 from peregrinearb import format_graph_for_json, load_exchange_graph
 import networkx as nx
-import ccxt.async as ccxt
+import ccxt.async_support as ccxt
 import asyncio
 import math
 

@@ -1,4 +1,4 @@
-import ccxt.async as ccxt
+import ccxt.async_support as ccxt
 import asyncio
 import json
 

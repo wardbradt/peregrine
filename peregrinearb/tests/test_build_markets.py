@@ -1,7 +1,7 @@
 from unittest import TestCase
 from peregrinearb.async_build_markets import build_all_collections, build_specific_collections, build_collections, \
     build_arbitrage_graph_for_exchanges, SymbolCollectionBuilder
-import ccxt.async as ccxt
+import ccxt.async_support as ccxt
 import asyncio
 
 

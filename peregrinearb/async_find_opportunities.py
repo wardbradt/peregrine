@@ -1,4 +1,4 @@
-import ccxt.async as ccxt
+import ccxt.async_support as ccxt
 from .async_build_markets import get_exchanges_for_market
 import asyncio
 import logging
