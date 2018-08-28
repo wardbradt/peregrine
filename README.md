@@ -2,11 +2,14 @@
 
 A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries on over 38,000 trading pairs
 
+## A Note on Development
+I am currently unable to continue the development of peregrine in this repository. I will respond to [issues](https://github.com/wardbradt/peregrine/issues) when I have time to but likely will notcontribute to the codebase. If you have a question, do not hesitate to ask. For anyone interested in this project, note that this README is not up to date with the code; there are several large features not described here.
+
 ## Installation
 1. Ensure you have [installed pip](https://pip.pypa.io/en/stable/installing/).
 2. Run the following in your command line:
 ```
-pip install peregrinearb
+pip install git+https://github.com/wardbradt/peregrine
 ```
 
 ## Finding Arbitrage Opportunities: Example Usage
