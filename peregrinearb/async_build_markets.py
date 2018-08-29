@@ -14,7 +14,7 @@ class CollectionBuilder:
         # stores markets which are only available on one exchange: keys are markets names and values are exchange names
         self.singularly_available_markets = {}
 
-    async def async_build_all_collections(self, write=True, ccxt_errors=False):
+    async def async_build_all_collections(self, write=True, ccxt_errors=False, collections_dir='./'):
         """
         Refer to glossary.md for the definition of a "collection"
         :param write: If true, will write collections and singularly_available_markets to json files in /collections
@@ -26,15 +26,15 @@ class CollectionBuilder:
         await asyncio.wait(tasks)
 
         if write:
-            with open('./collections/collections.json', 'w') as outfile:
+            with open('{}collections.json'.format(collections_dir), 'w') as outfile:
                 json.dump(self.collections, outfile)
 
-            with open('./collections/singularly_available_markets.json', 'w') as outfile:
+            with open('{}singularly_available_markets.json'.format(collections_dir), 'w') as outfile:
                 json.dump(self.singularly_available_markets, outfile)
 
         return self.collections
 
-    def build_all_collections(self, write=True, ccxt_errors=False):
+    def build_all_collections(self, write=True, ccxt_errors=False, collections_dir='./'):
         """
         A synchronous version of async_build_all_collections
         Refer to glossary.md for the definition of a "collection"
@@ -44,7 +44,9 @@ class CollectionBuilder:
         market name
         """
 
-        asyncio.get_event_loop().run_until_complete(self.async_build_all_collections(write, ccxt_errors))
+        asyncio.get_event_loop().run_until_complete(
+            self.async_build_all_collections(write, ccxt_errors, collections_dir)
+        )
 
         return self.collections
 
@@ -285,12 +287,12 @@ def build_all_collections(write=True, ccxt_errors=False):
     asyncio.get_event_loop().run_until_complete(async_build_all_collections(write, ccxt_errors))
 
 
-async def async_get_exchanges_for_market(symbol):
+async def async_get_exchanges_for_market(symbol, collections_dir='./'):
     """
     Returns the list of exchanges on which a market is traded
     """
     try:
-        with open('./collections/collections.json') as f:
+        with open('{}collections.json'.format(collections_dir)) as f:
             collections = json.load(f)
         for market_name, exchanges in collections.items():
             if market_name == symbol:
@@ -298,7 +300,7 @@ async def async_get_exchanges_for_market(symbol):
     except FileNotFoundError:
         return build_specific_collections(symbols=[symbol])
 
-    with open('./collections/singularly_available_markets.json') as f:
+    with open('{}singularly_available_markets.json'.format(collections_dir)) as f:
         singularly_available_markets = json.load(f)
     for market_name, exchange in singularly_available_markets:
         if market_name == symbol:
@@ -307,13 +309,13 @@ async def async_get_exchanges_for_market(symbol):
     raise ExchangeNotInCollectionsError(symbol)
 
 
-def get_exchanges_for_market(symbol):
+def get_exchanges_for_market(symbol, collections_dir='./'):
     """
     Synchronous wrapper for async_build_all_collections
     """
     try:
         asyncio.get_event_loop().run_until_complete(
-            async_get_exchanges_for_market(symbol)
+            async_get_exchanges_for_market(symbol, collections_dir)
         )
     except RuntimeError:
         raise RuntimeError('build_specific_collections was called from an asynchronous context. The event loop is '
