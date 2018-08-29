@@ -1,5 +1,5 @@
-import ccxt.async as ccxt
-from .async_build_markets import get_exchanges_for_market
+import ccxt.async_support as ccxt
+from .async_build_markets import async_get_exchanges_for_market
 import asyncio
 
 
@@ -12,11 +12,10 @@ class OpportunityFinder:
         highest market bid price.
         """
         if exchanges is None:
-            if not name:
-                raise ValueError("if parameter name == False, parameter exchanges cannot be None.")
-            exchanges = get_exchanges_for_market(market_name)
+            exchanges = []
 
-        exchanges = [getattr(ccxt, exchange_id)() for exchange_id in exchanges]
+        if not name:
+            exchanges = [getattr(ccxt, exchange_id)() for exchange_id in exchanges]
 
         self.exchange_list = exchanges
         self.market_name = market_name
@@ -64,6 +63,9 @@ class OpportunityFinder:
                 'lowest_ask': self.lowest_ask}
 
 
-async def get_opportunity_for_market(ticker, exchanges=None, name=True):
-    finder = OpportunityFinder(ticker, exchanges=exchanges, name=name)
+async def get_opportunity_for_market(symbol, exchanges=None, name=True):
+    if exchanges is None:
+        exchanges = await async_get_exchanges_for_market(symbol)
+        name = True
+    finder = OpportunityFinder(symbol, exchanges=exchanges, name=name)
     return await finder.find_min_max()

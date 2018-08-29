@@ -1,4 +1,4 @@
-import ccxt.async as ccxt
+import ccxt.async_support as ccxt
 import asyncio
 import json
 import networkx as nx
@@ -43,6 +43,7 @@ class CollectionBuilder:
         :return: A dictionary where keys are market names and values are lists of exchanges which support the respective
         market name
         """
+
         asyncio.get_event_loop().run_until_complete(self.async_build_all_collections(write, ccxt_errors))
 
         return self.collections
@@ -250,12 +251,22 @@ def build_collections(blacklist=False, write=True, ccxt_errors=False):
                                       ccxt_errors, has={'fetchOrderBook': True})
 
 
-def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, **kwargs):
+async def async_build_specific_collections(blacklist=False, write=False, ccxt_errors=False, **kwargs):
     builder = SpecificCollectionBuilder(blacklist, **kwargs)
-    return builder.build_all_collections(write, ccxt_errors)
+    return await builder.async_build_all_collections(write, ccxt_errors)
 
 
-def build_all_collections(write=True, ccxt_errors=False):
+def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, **kwargs):
+    try:
+        asyncio.get_event_loop().run_until_complete(
+            async_build_specific_collections(blacklist, write, ccxt_errors, **kwargs)
+        )
+    except RuntimeError:
+        raise RuntimeError('build_specific_collections was called from an asynchronous context. The event loop is '
+                           'already running. You probably meant to use async_build_specific_collections')
+
+
+async def async_build_all_collections(write=True, ccxt_errors=False):
     """
     Be careful when using this. build_collections is typically preferred over this method because build_collections only
     accounts for exchanges which have a private API (and thus can be traded on).
@@ -264,10 +275,17 @@ def build_all_collections(write=True, ccxt_errors=False):
     :return:
     """
     builder = CollectionBuilder()
-    return builder.build_all_collections(write=write, ccxt_errors=ccxt_errors)
+    return await builder.async_build_all_collections(write, ccxt_errors)
 
 
-def get_exchanges_for_market(market_ticker):
+def build_all_collections(write=True, ccxt_errors=False):
+    """
+    Synchronous wrapper for async_build_all_collections
+    """
+    asyncio.get_event_loop().run_until_complete(async_build_all_collections(write, ccxt_errors))
+
+
+async def async_get_exchanges_for_market(symbol):
     """
     Returns the list of exchanges on which a market is traded
     """
@@ -275,15 +293,28 @@ def get_exchanges_for_market(market_ticker):
         with open('./collections/collections.json') as f:
             collections = json.load(f)
         for market_name, exchanges in collections.items():
-            if market_name == market_ticker:
+            if market_name == symbol:
                 return exchanges
     except FileNotFoundError:
-        return build_specific_collections(symbols=[market_ticker])
+        return build_specific_collections(symbols=[symbol])
 
     with open('./collections/singularly_available_markets.json') as f:
         singularly_available_markets = json.load(f)
     for market_name, exchange in singularly_available_markets:
-        if market_name == market_ticker:
+        if market_name == symbol:
             return [exchange]
 
-    raise ExchangeNotInCollectionsError(market_ticker)
+    raise ExchangeNotInCollectionsError(symbol)
+
+
+def get_exchanges_for_market(symbol):
+    """
+    Synchronous wrapper for async_build_all_collections
+    """
+    try:
+        asyncio.get_event_loop().run_until_complete(
+            async_get_exchanges_for_market(symbol)
+        )
+    except RuntimeError:
+        raise RuntimeError('build_specific_collections was called from an asynchronous context. The event loop is '
+                           'already running. You probably meant to use async_build_specific_collections')

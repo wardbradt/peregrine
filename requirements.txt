@@ -1,6 +1,6 @@
 tweepy
 git+git://github.com/wardbradt/networkx.git#egg=networkx
-numpy==1.14.0
+numpy
 ccxt
 # Only necessary if you will be modifying or using cythonperegrine
-Cython==0.26.1
+Cython
