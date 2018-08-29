@@ -3,6 +3,12 @@ from .async_build_markets import async_get_exchanges_for_market
 import asyncio
 
 
+__all__ = [
+    'OpportunityFinder',
+    'get_opportunity_for_market'
+]
+
+
 class OpportunityFinder:
 
     def __init__(self, market_name, exchanges=None, name=True):
@@ -63,9 +69,9 @@ class OpportunityFinder:
                 'lowest_ask': self.lowest_ask}
 
 
-async def get_opportunity_for_market(symbol, exchanges=None, name=True):
+async def get_opportunity_for_market(symbol, collections_dir, exchanges=None, name=True):
     if exchanges is None:
-        exchanges = await async_get_exchanges_for_market(symbol)
+        exchanges = await async_get_exchanges_for_market(symbol, collections_dir)
         name = True
     finder = OpportunityFinder(symbol, exchanges=exchanges, name=name)
     return await finder.find_min_max()

@@ -1,5 +1,14 @@
 # Peregrine
 
+- [A Note](#a-note)
+- [Installation](#installation)
+- [Example Usage](#example-usage)
+  * [Multiples Exchange/ One Currency](#multiples-exchange--one-currency)
+  * [One Exchange/ Multiple Currencies](#one-exchange--multiple-currencies)
+  * [Multiple Exchanges/ Multiple Currencies](#multiple-exchanges--multiple-currencies)
+- [Potential Enhancements](#potential-enhancements)
+- [Tips](#tips)
+
 A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries on over 38,000 trading pairs
 
 ## A Note
@@ -12,7 +21,7 @@ I am currently unable to continue the development of peregrine in this repositor
 pip install git+https://github.com/wardbradt/peregrine
 ```
 
-## Finding Arbitrage Opportunities: Example Usage
+## Example Usage
 
 This section provides a brief overview of Peregrine's functionality. Examples demonstrating many more features are available in [peregrine/examples](https://github.com/wardbradt/peregrine/tree/master/examples).
 
@@ -21,7 +30,8 @@ This section provides a brief overview of Peregrine's functionality. Examples de
 ```python
 from peregrinearb import get_opportunity_for_market
 import asyncio
-opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD"))
+collections_dir = '/Users/wardbradt/cs/peregrine/'
+opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD", collections_dir))
 print(opportunity)
 ```
 
@@ -38,7 +48,8 @@ If you want to specify which exchanges to find opportunities on:
 from peregrinearb import get_opportunity_for_market
 import asyncio
 
-opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD", exchange_list=["anxpro", "bitbay", "coinfloor", "gemini", "livecoin"]))
+collections_dir = '/Users/wardbradt/cs/peregrine/'
+opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD", collections_dir, exchanges=["anxpro", "bitbay", "coinfloor", "gemini", "livecoin"]))
 print(opportunity)
 ```
 
@@ -47,8 +58,10 @@ If you want to find opportunities on the exchanges of only a certain country<sup
 ```python
 from peregrinearb import build_specific_collections, get_opportunity_for_market
 
-us_eth_btc_exchanges = build_specific_collections('countries'=['US'])
-opportunity = get_opportunity_for_market("ETH/BTC", us_eth_btc_exchanges["ETH/BTC"])
+
+us_eth_btc_exchanges = build_specific_collections(countries=['US'])
+collections_dir = '/Users/wardbradt/cs/peregrine/'
+opportunity = get_opportunity_for_market("ETH/BTC", collections_dir, us_eth_btc_exchanges["ETH/BTC"])
 print(opportunity)
 ```
 
@@ -130,8 +143,6 @@ graph = create_weighted_multi_exchange_digraph(['exmo', 'binance', 'bitmex', 'bi
 
 graph, paths = bellman_ford_multi(graph, 'ETH', unique_paths=True)
 for path in paths:
-    # total = calculate_profit_ratio_for_path(graph, path)
-    # print(path)
     print_profit_opportunity_for_path_multi(graph, path)
 ```
 The most profitable of the two printed out is:
@@ -155,22 +166,13 @@ USD to BCH at 0.000949667616334283 = 62.61645540736334 on kraken for BCH/USD
 BCH to ETH at 1.8874401 = 118.18480885571941 on bittrex for BCH/ETH
 ```
 
-## To Do
-
-* Implement a fix to convert from USDT to USD and back again for markets based on USDT
-* Package for pip
-* Write better/ more examples and unit tests
-* Fix frequent `Unclosed connector` ccxt error (look at [this issue](https://github.com/ccxt/ccxt/issues/2092))
 ## Potential Enhancements
 
-* Create (better) data visualizations (The Networkx [documentation](https://networkx.github.io/documentation/stable/reference/drawing.html) provides some useful guides on drawing Networkx graphs)
-* Implement machine learning to see which markets or exchanges consistently host the greatest disparities
-* Update cythonperegrine to reflect some of the changes to peregrine
-* Update doc strings to the same [standard](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard) as NumPy and SciPy
-* Research [this paper](http://www.quantumforquants.org/quantum-computing/qa-arbitrage/) which discusses a more efficient way of finding the best arbitrage opportunity. It would take much work to implement but if someone with experience in quantum computing could help me that would be great.
+* Update cythonperegrine to reflect some of the changes to peregrine, specifically in regards to intra exchange opportunities
+* Implement WebSockets
+* Use scipy instead of networkx for performance
 * Related to the above, implement feature to find maximally profitable arbitrage opportunity.
 * Implement `amount` parameter in bellman_ford to find cycles using at maximum the given amount.
-* Research each exchange's fees and hard-code them (optionally into ccxt's Exchange objects) to account for fees when searching for opportunities.
 
 ## Tips
 If you have benefitted from Peregrine and would like to show your appreciation, feel free to send funds to any of the following addresses:
