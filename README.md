@@ -12,7 +12,7 @@
 A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries on over 38,000 trading pairs
 
 ## A Note
-I am currently developing this project in a fork, [Stakedllc/peregrine](https://github.com/Stakedllc/peregrine). That fork is meant to serve a proprietary project that I have developed, meaning that some functionality may not work for general use cases. I plan to pull some changes from that fork into this one soon, however, I have not yet. If you have a question, please open an issue in which ever repository you use. Be aware that the README in the Stakedllc fork is not up to date; there are many features not that are not listed.
+I am currently developing this project in a fork, [Stakedllc/peregrine](https://github.com/Stakedllc/peregrine). That fork serves a proprietary project, meaning that some functionality may not work for general use cases. I plan to pull some changes from that fork into this one soon, however, I have not yet. If you have a question, please open an issue in which ever repository you use. Be aware that the README in the Stakedllc fork is not up to date; there are several features that are not listed.
 
 ## Installation
 1. Ensure you have [installed pip](https://pip.pypa.io/en/stable/installing/).
