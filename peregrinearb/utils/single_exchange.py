@@ -4,7 +4,6 @@ import networkx as nx
 import ccxt.async_support as ccxt
 import datetime
 import logging
-from peregrinearb.settings import LOGGING_PATH
 from peregrinearb.utils import format_for_log
 
 
@@ -21,7 +20,7 @@ class FeesNotAvailable(Exception):
     pass
 
 
-file_logger = logging.getLogger(LOGGING_PATH + __name__)
+logger = logging.getLogger('peregrinearb.utils.single_exchange')
 
 
 def create_exchange_graph(exchange: ccxt.Exchange):
@@ -53,10 +52,10 @@ async def load_exchange_graph(exchange, name=True, fees=False, suppress=None, de
     if suppress is None:
         suppress = ['markets']
     if name:
-        adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange})
+        adapter = LoadExchangeGraphAdapter(logger, {'count': invocation_id, 'exchange': exchange})
         exchange = getattr(ccxt, exchange)()
     else:
-        adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
+        adapter = LoadExchangeGraphAdapter(logger, {'count': invocation_id, 'exchange': exchange.id})
 
     if tickers is None:
         adapter.info('Fetching tickers')
@@ -128,7 +127,7 @@ async def populate_exchange_graph(graph: nx.Graph, exchange: ccxt.Exchange, log=
     """
     if suppress is None:
         suppress = ['markets']
-    adapter = LoadExchangeGraphAdapter(file_logger, {'count': invocation_id, 'exchange': exchange.id})
+    adapter = LoadExchangeGraphAdapter(logger, {'count': invocation_id, 'exchange': exchange.id})
 
     result = nx.DiGraph()
 

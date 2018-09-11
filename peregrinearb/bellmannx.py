@@ -4,43 +4,26 @@ from .utils import last_index_in_list, format_for_log
 import asyncio
 from .utils import load_exchange_graph
 import logging
-from .settings import LOGGING_PATH
 
 
 class SeenNodeError(Exception):
     pass
 
 
-file_logger = logging.getLogger(LOGGING_PATH + __name__)
-
-
-class BellmanExchangeAdapter(logging.LoggerAdapter):
-
-    def __init__(self, logger, extra):
-        super(BellmanExchangeAdapter, self).__init__(logger, extra)
-
-    def process(self, msg, kwargs):
-        return 'Invocation#{} - Exchange#{} - {}'.format(self.extra['count'], self.extra['exchange'], msg), kwargs
+logger = logging.getLogger('peregrinearb.bellmannx')
 
 
 class NegativeWeightFinder:
 
     def __init__(self, graph: nx.Graph, invocation_id=0):
-        logger = logging.getLogger(LOGGING_PATH + __name__)
-        try:
-            self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
-        # if graph.graph['exchange_name'] does not exist
-        except KeyError:
-            self.adapter = BellmanExchangeAdapter(logger,
-                                                  {'exchange': '', 'count': invocation_id})
-        self.adapter.info('Initializing NegativeWeightFinder')
+        logger.info('Initializing NegativeWeightFinder')
         self.graph = graph
         self.predecessor_to = {}
         # the maximum weight which can be transferred from source to each node
         self.distance_to = {}
 
         self.seen_nodes = set()
-        self.adapter.info('Initialized NegativeWeightFinder')
+        logger.info('Initialized NegativeWeightFinder')
 
     def reset_all_but_graph(self):
         self.predecessor_to = {}
@@ -68,21 +51,21 @@ class NegativeWeightFinder:
         if source not in self.graph:
             raise ValueError('source {} not in graph'.format(source))
 
-        self.adapter.info('Running bellman_ford')
+        logger.info('Running bellman_ford')
         self.initialize(source)
 
-        self.adapter.debug('Relaxing edges')
+        logger.debug('Relaxing edges')
         # After len(graph) - 1 passes, algorithm is complete.
         for i in range(len(self.graph) - 1):
             # for each node in the graph, test if the distance to each of its siblings is shorter by going from
             # source->base_currency + base_currency->quote_currency
             for edge in self.graph.edges(data=True):
                 self.relax(edge)
-        self.adapter.debug('Finished relaxing edges')
+        logger.debug('Finished relaxing edges')
 
         paths = self._check_final_condition(unique_paths=unique_paths)
 
-        self.adapter.info('Ran bellman_ford')
+        logger.info('Ran bellman_ford')
         return paths
 
     def _check_final_condition(self, **kwargs):
@@ -100,25 +83,25 @@ class NegativeWeightFinder:
         is helpful to describe in the docstring what the final condition is and, if not negative cycles, what the
         method's returned generator yields.
         """
-        self.adapter.info('Retracing loops')
+        logger.info('Retracing loops')
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 try:
                     path = self._retrace_negative_loop(edge[1], unique_paths=kwargs['unique_paths'])
                 except SeenNodeError:
-                    self.adapter.debug('SeenNodeError raised')
+                    logger.debug('SeenNodeError raised')
                     continue
 
-                self.adapter.info(format_for_log('Yielding path', path=str(path)))
+                logger.info(format_for_log('Yielding path', path=str(path)))
                 yield path
 
     def relax(self, edge):
-        self.adapter.debug('Relaxing edge between {} and {}'.format(edge[1], edge[0]))
+        logger.debug('Relaxing edge between {} and {}'.format(edge[1], edge[0]))
         if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
             self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
             self.predecessor_to[edge[1]] = edge[0]
 
-        self.adapter.debug('Relaxed edge between {} and {}'.format(edge[1], edge[0]))
+        logger.debug('Relaxed edge between {} and {}'.format(edge[1], edge[0]))
 
         return True
 
@@ -152,13 +135,6 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
 
     def __init__(self, graph: nx.Graph, invocation_id=0):
         super(NegativeWeightDepthFinder, self).__init__(graph)
-        logger = logging.getLogger(LOGGING_PATH + __name__)
-        try:
-            self.adapter = BellmanExchangeAdapter(logger, {'exchange': graph.graph['exchange_name'],
-                                                           'count': invocation_id})
-        except KeyError:
-            self.adapter = BellmanExchangeAdapter(logger, {'exchange': '',
-                                                           'count': invocation_id})
 
     def _retrace_negative_loop(self, start, unique_paths=False):
         """
@@ -169,7 +145,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         if unique_paths and start in self.seen_nodes:
             raise SeenNodeError
 
-        self.adapter.debug('Retracing loop')
+        logger.debug('Retracing loop')
 
         arbitrage_loop = [start]
         prior_node = self.predecessor_to[arbitrage_loop[0]]
@@ -194,7 +170,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             if prior_node in arbitrage_loop:
                 arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, prior_node) + 1]
                 arbitrage_loop.insert(0, prior_node)
-                self.adapter.info('Retraced loop')
+                logger.info('Retraced loop')
                 return {'loop': arbitrage_loop, 'minimum': minimum}
 
             arbitrage_loop.insert(0, prior_node)
@@ -231,12 +207,7 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
     to the rate and maximum volume for the trade.
     The volume and rate are always in terms of base currency.
     """
-    try:
-        adapter = BellmanExchangeAdapter(file_logger, {'exchange': graph.graph['exchange_name'], 'count': invocation_id})
-    except KeyError:
-        adapter = BellmanExchangeAdapter(file_logger, {'exchange': '',
-                                                       'count': invocation_id})
-    adapter.info('Calculating profit ratio')
+    logger.info('Calculating profit ratio')
     if gather_path_data:
         path_data = []
 
@@ -266,7 +237,7 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
         else:
             ratio *= math.exp(-graph[start][end]['weight'])
 
-    adapter.info('Calculated profit ratio')
+    logger.info('Calculated profit ratio')
 
     if gather_path_data:
         return (ratio / starting_amount), path_data
