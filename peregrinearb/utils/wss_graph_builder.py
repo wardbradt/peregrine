@@ -13,10 +13,10 @@ adapter = logging.getLogger(__name__)
 
 def wss_add_market(graph, symbol, market_data):
     base, quote = symbol.split('/')
-    graph.add_edge(base, quote, weight=float('Inf'), depth=float('Inf'), market_name=symbol, fee=market_data['taker_fee'],
-                   volume=0, no_fee_rate=-1, trade_type='SELL')
-    graph.add_edge(quote, base, weight=float('Inf'), depth=float('Inf'), market_name=symbol, fee=market_data['taker_fee'],
-                   volume=0, no_fee_rate=-1, trade_type='BUY')
+    graph.add_edge(base, quote, weight=float('Inf'), depth=float('Inf'), market_name=symbol,
+                   fee=market_data['taker_fee'], volume=0, no_fee_rate=-float('Inf'), trade_type='SELL')
+    graph.add_edge(quote, base, weight=float('Inf'), depth=float('Inf'), market_name=symbol,
+                   fee=market_data['taker_fee'], volume=0, no_fee_rate=float('Inf'), trade_type='BUY')
 
 
 def wss_update_graph(graph, symbol, side, price, volume, *args):
