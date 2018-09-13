@@ -16,14 +16,12 @@ logger = logging.getLogger('peregrinearb.bellmannx')
 class NegativeWeightFinder:
 
     def __init__(self, graph: nx.Graph, invocation_id=0):
-        logger.info('Initializing NegativeWeightFinder')
         self.graph = graph
         self.predecessor_to = {}
         # the maximum weight which can be transferred from source to each node
         self.distance_to = {}
 
         self.seen_nodes = set()
-        logger.info('Initialized NegativeWeightFinder')
 
     def reset_all_but_graph(self):
         self.predecessor_to = {}
@@ -51,7 +49,7 @@ class NegativeWeightFinder:
         if source not in self.graph:
             raise ValueError('source {} not in graph'.format(source))
 
-        logger.info('Running bellman_ford')
+        logger.debug('Running bellman_ford')
         self.initialize(source)
 
         logger.debug('Relaxing edges')
@@ -65,7 +63,7 @@ class NegativeWeightFinder:
 
         paths = self._check_final_condition(unique_paths=unique_paths)
 
-        logger.info('Ran bellman_ford')
+        logger.debug('Ran bellman_ford')
         return paths
 
     def _check_final_condition(self, **kwargs):
@@ -83,7 +81,7 @@ class NegativeWeightFinder:
         is helpful to describe in the docstring what the final condition is and, if not negative cycles, what the
         method's returned generator yields.
         """
-        logger.info('Retracing loops')
+        logger.debug('Checking final condition')
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 try:
@@ -109,6 +107,7 @@ class NegativeWeightFinder:
         """
         :return: negative loop path
         """
+        logger.info('Retracing loops')
         if unique_paths and start in self.seen_nodes:
             raise SeenNodeError
 
@@ -145,7 +144,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         if unique_paths and start in self.seen_nodes:
             raise SeenNodeError
 
-        logger.debug('Retracing loop')
+        logger.info('Retracing loops')
 
         arbitrage_loop = [start]
         prior_node = self.predecessor_to[arbitrage_loop[0]]
