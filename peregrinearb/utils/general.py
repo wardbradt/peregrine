@@ -1,6 +1,15 @@
 import math
 import networkx as nx
-import warnings
+import logging
+
+
+__all__ = [
+    'ExchangeNotInCollectionsError',
+    'format_for_log',
+    'FormatForLogAdapter',
+    'print_profit_opportunity_for_path',
+    'print_profit_opportunity_for_path_multi',
+]
 
 
 class ExchangeNotInCollectionsError(Exception):
@@ -12,16 +21,27 @@ class ExchangeNotInCollectionsError(Exception):
 def format_for_log(msg, **kwargs):
     result = ''
     for key, value in kwargs.items():
-        key = str(key).capitalize()
+        key = str(key).upper()
         # if key is not Labels or if the value for labels is not a list
-        if key.upper() != 'LABELS' or type(value) != list:
+        if key != 'LABELS':
             result += '{}#{} - '.format(key, value)
         else:
             for label in value:
-                result += format_for_log('', label=label, )
+                result += '{}#{} - '.format('label', label)
 
     result += msg
     return result
+
+
+class FormatForLogAdapter(logging.LoggerAdapter):
+
+    def __init__(self, logger, extra=None):
+        super().__init__(logger, extra or {})
+
+    def log(self, level, msg, *args, exc_info=None, extra=None, stack_info=False, **kwargs):
+        if self.isEnabledFor(level):
+            self.logger._log(level, format_for_log(msg, **kwargs), (), exc_info=exc_info, extra=extra,
+                             stack_info=stack_info)
 
 
 def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, starting_amount=100):

@@ -1,6 +1,6 @@
 import math
 import networkx as nx
-from .utils import last_index_in_list, format_for_log
+from .utils import last_index_in_list, FormatForLogAdapter
 import asyncio
 from .utils import load_exchange_graph
 import logging
@@ -10,7 +10,7 @@ class SeenNodeError(Exception):
     pass
 
 
-logger = logging.getLogger('peregrinearb.bellmannx')
+adapter = FormatForLogAdapter(logging.getLogger('peregrinearb.bellmannx'))
 
 
 class NegativeWeightFinder:
@@ -49,21 +49,21 @@ class NegativeWeightFinder:
         if source not in self.graph:
             raise ValueError('source {} not in graph'.format(source))
 
-        logger.debug('Running bellman_ford')
+        adapter.debug('Running bellman_ford')
         self.initialize(source)
 
-        logger.debug('Relaxing edges')
+        adapter.debug('Relaxing edges')
         # After len(graph) - 1 passes, algorithm is complete.
         for i in range(len(self.graph) - 1):
             # for each node in the graph, test if the distance to each of its siblings is shorter by going from
             # source->base_currency + base_currency->quote_currency
             for edge in self.graph.edges(data=True):
                 self.relax(edge)
-        logger.debug('Finished relaxing edges')
+        adapter.debug('Finished relaxing edges')
 
         paths = self._check_final_condition(unique_paths=unique_paths)
 
-        logger.debug('Ran bellman_ford')
+        adapter.debug('Ran bellman_ford')
         return paths
 
     def _check_final_condition(self, **kwargs):
@@ -81,25 +81,23 @@ class NegativeWeightFinder:
         is helpful to describe in the docstring what the final condition is and, if not negative cycles, what the
         method's returned generator yields.
         """
-        logger.debug('Checking final condition')
+        adapter.debug('Checking final condition')
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
                 try:
                     path = self._retrace_negative_loop(edge[1], unique_paths=kwargs['unique_paths'])
                 except SeenNodeError:
-                    logger.debug('SeenNodeError raised')
+                    adapter.debug('SeenNodeError raised')
                     continue
 
-                logger.info(format_for_log('Yielding path', path=str(path)))
+                adapter.debug('Yielding path', path=str(path))
                 yield path
 
     def relax(self, edge):
-        logger.debug('Relaxing edge between {} and {}'.format(edge[1], edge[0]))
+        adapter.debug('Relaxing edge', fromnode=edge[1], tonode=edge[0])
         if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
             self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
             self.predecessor_to[edge[1]] = edge[0]
-
-        logger.debug('Relaxed edge between {} and {}'.format(edge[1], edge[0]))
 
         return True
 
@@ -107,7 +105,7 @@ class NegativeWeightFinder:
         """
         :return: negative loop path
         """
-        logger.info('Retracing loops')
+        adapter.debug('Retracing loops')
         if unique_paths and start in self.seen_nodes:
             raise SeenNodeError
 
@@ -144,7 +142,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         if unique_paths and start in self.seen_nodes:
             raise SeenNodeError
 
-        logger.info('Retracing loops')
+        adapter.debug('Retracing loops')
 
         arbitrage_loop = [start]
         prior_node = self.predecessor_to[arbitrage_loop[0]]
@@ -169,7 +167,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
             if prior_node in arbitrage_loop:
                 arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, prior_node) + 1]
                 arbitrage_loop.insert(0, prior_node)
-                logger.info('Retraced loop')
+                adapter.info('Retraced loop')
                 return {'loop': arbitrage_loop, 'minimum': minimum}
 
             arbitrage_loop.insert(0, prior_node)
@@ -206,7 +204,7 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
     to the rate and maximum volume for the trade.
     The volume and rate are always in terms of base currency.
     """
-    logger.info('Calculating profit ratio')
+    adapter.info('Calculating profit ratio')
     if gather_path_data:
         path_data = []
 
@@ -236,7 +234,7 @@ def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1,
         else:
             ratio *= math.exp(-graph[start][end]['weight'])
 
-    logger.info('Calculated profit ratio')
+    adapter.info('Calculated profit ratio')
 
     if gather_path_data:
         return (ratio / starting_amount), path_data
