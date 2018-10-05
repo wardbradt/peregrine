@@ -1,5 +1,5 @@
 tweepy
-git+git://github.com/wardbradt/networkx.git#egg=networkx
+git+https://github.com/wardbradt/networkx.git#egg=networkx
 numpy
 ccxt
 # Only necessary if you will be modifying or using cythonperegrine
