@@ -5,6 +5,12 @@ import logging
 from .settings import INTER_LOGGING_PATH
 import datetime
 from .utils import format_for_log, Collections
+__all__ = [
+    'OpportunityFinder',
+    'SuperOpportunityFinder',
+    'get_opportunity_for_market',
+    'get_opportunities_for_collection',
+]
 
 
 file_logger = logging.getLogger(INTER_LOGGING_PATH + __name__)

@@ -1,6 +1,10 @@
 import networkx as nx
 from .bellmannx import NegativeWeightFinder, SeenNodeError
 from .utils import get_least_edge_in_bunch
+__all__ = [
+    'NegativeWeightFinderMulti',
+    'bellman_ford_multi',
+]
 
 
 class NegativeWeightFinderMulti(NegativeWeightFinder):

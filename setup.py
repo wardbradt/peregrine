@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='peregrinearb',
-    version='1.6.15',
+    version='1.6.16',
     description='A Python library which provides several algorithms to detect arbitrage opportunities across over 90 '
                 'cryptocurrency markets in 34 countries',
     author='Ward Bradt',
