@@ -1,5 +1,3 @@
-import networkx as nx
-import json
 __all__ = [
     'draw_graph_to_png',
     'format_graph_for_json',
@@ -8,6 +6,8 @@ __all__ = [
     'digraph_from_dict',
     'multi_digraph_from_dict',
 ]
+import networkx as nx
+import json
 
 
 accepted_types = {nx.MultiDiGraph: 'MultiDiGraph', nx.MultiGraph: 'MultiGraph', nx.DiGraph: 'DiGraph',
