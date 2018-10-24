@@ -201,7 +201,7 @@ class SuperOpportunityFinder:
             'highest_bid': {'price': -1, 'exchange': None, 'volume': 0},
             'lowest_ask': {'price': float('Inf'), 'exchange': None, 'volume': 0},
             'ticker': market_name,
-            'datetime': datetime.datetime.now(),
+            'datetime': datetime.datetime.now(tz=datetime.timezone.utc),
             'id': current_opp_id
         }
 
