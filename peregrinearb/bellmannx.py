@@ -22,6 +22,7 @@ adapter = FormatForLogAdapter(logging.getLogger('peregrinearb.bellmannx'))
 
 
 class NegativeWeightFinder:
+    __slots__ = ['graph', 'predecessor_to', 'distance_to', 'seen_nodes']
 
     def __init__(self, graph: nx.Graph, invocation_id=0):
         self.graph = graph
@@ -138,9 +139,6 @@ class NegativeWeightFinder:
 
 class NegativeWeightDepthFinder(NegativeWeightFinder):
 
-    def __init__(self, graph: nx.Graph, invocation_id=0):
-        super(NegativeWeightDepthFinder, self).__init__(graph)
-
     def _retrace_negative_loop(self, start, unique_paths=False):
         """
         Unlike NegativeWeightFinder's _retrace_negative_loop, this returns a dict structured as
@@ -204,8 +202,25 @@ def find_opportunities_on_exchange(exchange_name, source, unique_paths=False, de
     return bellman_ford(graph, source, unique_paths)
 
 
-def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1, invocation_id=0,
-                                    gather_path_data=False):
+def get_starting_volume(graph, path):
+    adapter.info('Gathering path data', path=str(path))
+
+    volume_scalar = 1
+    start = path[0]
+    end = path[1]
+    previous_volume = math.exp(-graph[start][end]['depth']) * math.exp(-graph[start][end]['weight'])
+    for i in range(1, len(path) - 1):
+        start = path[i]
+        end = path[i + 1]
+        current_max_volume = math.exp(-graph[start][end]['depth'])
+        if previous_volume > current_max_volume:
+            volume_scalar *= current_max_volume / previous_volume
+        previous_volume *= math.exp(-graph[start][end]['depth'])
+
+    return math.exp(-graph[path[0]][path[1]]['depth']) * volume_scalar
+
+
+def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1, gather_path_data=False):
     """
     If gather_path_data, returns a two-tuple where the first element is the profit ratio for the given path and the
     second element is a dict keyed by market symbol and valued by a a dict with 'rate' and 'volume' keys, corresponding
