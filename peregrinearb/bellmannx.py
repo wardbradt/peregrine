@@ -11,6 +11,7 @@ __all__ = [
     'find_opportunities_on_exchange',
     'calculate_profit_ratio_for_path',
     'SeenNodeError',
+    'get_starting_volume',
 ]
 
 
@@ -24,7 +25,7 @@ adapter = FormatForLogAdapter(logging.getLogger('peregrinearb.bellmannx'))
 class NegativeWeightFinder:
     __slots__ = ['graph', 'predecessor_to', 'distance_to', 'seen_nodes']
 
-    def __init__(self, graph: nx.Graph, invocation_id=0):
+    def __init__(self, graph: nx.Graph):
         self.graph = graph
         self.predecessor_to = {}
         # the maximum weight which can be transferred from source to each node
@@ -208,16 +209,16 @@ def get_starting_volume(graph, path):
     volume_scalar = 1
     start = path[0]
     end = path[1]
-    previous_volume = math.exp(-graph[start][end]['depth']) * math.exp(-graph[start][end]['weight'])
+    initial_volume = math.exp(-graph[start][end]['depth'])
+    previous_volume = initial_volume * math.exp(-graph[start][end]['weight'])
     for i in range(1, len(path) - 1):
         start = path[i]
         end = path[i + 1]
         current_max_volume = math.exp(-graph[start][end]['depth'])
         if previous_volume > current_max_volume:
             volume_scalar *= current_max_volume / previous_volume
-        previous_volume *= math.exp(-graph[start][end]['depth'])
-
-    return math.exp(-graph[path[0]][path[1]]['depth']) * volume_scalar
+        previous_volume *= math.exp(-graph[start][end]['weight'])
+    return initial_volume * volume_scalar
 
 
 def calculate_profit_ratio_for_path(graph, path, depth=False, starting_amount=1, gather_path_data=False):
