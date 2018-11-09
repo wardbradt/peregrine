@@ -6,6 +6,7 @@ import json
 import networkx as nx
 import math
 import random
+from ..utils import wss_add_market, wss_update_graph
 
 
 def graph_from_dict(graph_dict):
@@ -165,6 +166,27 @@ class TestBellmannx(TestCase):
         for path in paths:
             ratio = calculate_ratio(path['loop'])
             self.assertLess(ratio, 0.0)
+
+    def test_negative_weight_depth_finder_c(self):
+        """Tests NegativeWeightDepthFinder as it is used in arbitrag"""
+        symbols = ['BTC/USD', 'ETH/USD', 'ETH/BTC', 'LTC/BTC', 'LTC/USD', 'ETH/LTC', 'DRC/BTC', 'DRC/ETH']
+        markets = {symbol: {
+            'volume_increment': 10 ** -8,
+            'price_increment': 10 ** -8,
+            'min_market_funds': 10 ** -16,
+            'taker_fee': 0.001,
+            'maker_fee': 0,
+        } for symbol in symbols}
+        graph = nx.DiGraph()
+        [wss_add_market(graph, k, v) for k, v in markets.items()]
+        wss_update_graph(graph, 'BTC/USD', 'asks', 5000, 0.5)
+        wss_update_graph(graph, 'ETH/USD', 'bids', 500, 6)
+        wss_update_graph(graph, 'ETH/BTC', 'asks', 0.14, 8)
+
+        nwdf = NegativeWeightDepthFinder(graph)
+        paths = nwdf.bellman_ford('BTC')
+        for p in paths:
+            print(p)
 
     def test_ratio(self):
         G = nx.DiGraph()
