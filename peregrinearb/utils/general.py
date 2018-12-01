@@ -1,12 +1,8 @@
 import math
 import networkx as nx
-import logging
-
 
 __all__ = [
     'ExchangeNotInCollectionsError',
-    'format_for_log',
-    'FormatForLogAdapter',
     'print_profit_opportunity_for_path',
     'print_profit_opportunity_for_path_multi',
 ]
@@ -18,33 +14,7 @@ class ExchangeNotInCollectionsError(Exception):
                                                             .format(market_ticker))
 
 
-def format_for_log(msg, **kwargs):
-    result = ''
-    for key, value in kwargs.items():
-        key = str(key).upper()
-        # if key is not Labels or if the value for labels is not a list
-        if key != 'LABELS':
-            result += '{}#{} - '.format(key, value)
-        else:
-            for label in value:
-                result += '{}#{} - '.format('label', label)
-
-    result += msg
-    return result
-
-
-class FormatForLogAdapter(logging.LoggerAdapter):
-
-    def __init__(self, logger, extra=None):
-        super().__init__(logger, extra or {})
-
-    def log(self, level, msg, *args, exc_info=None, extra=None, stack_info=False, **kwargs):
-        if self.isEnabledFor(level):
-            self.logger._log(level, format_for_log(msg, **kwargs), (), exc_info=exc_info, extra=extra,
-                             stack_info=stack_info)
-
-
-def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, starting_amount=100):
+def print_profit_opportunity_for_path(graph, path, round_to=10**-8, depth=False, starting_amount=100):
     if not path:
         return
 
@@ -60,12 +30,8 @@ def print_profit_opportunity_for_path(graph, path, round_to=None, depth=False, s
         else:
             starting_amount *= math.exp(-graph[start][end]['weight'])
 
-        if round_to is None:
-            rate = math.exp(-graph[start][end]['weight'])
-            resulting_amount = starting_amount
-        else:
-            rate = round(math.exp(-graph[start][end]['weight']), round_to)
-            resulting_amount = round(starting_amount, round_to)
+        rate = round(math.exp(-graph[start][end]['weight']), round_to)
+        resulting_amount = round(starting_amount, round_to)
 
         printed_line = "{} to {} at {} = {}".format(start, end, rate, resulting_amount)
 
