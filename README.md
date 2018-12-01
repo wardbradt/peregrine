@@ -1,27 +1,31 @@
 # Peregrine
 
-- [A Note](#a-note)
-- [Installation](#installation)
-- [Example Usage](#example-usage)
-  * [Multiples Exchange/ One Currency](#multiples-exchange--one-currency)
-  * [One Exchange/ Multiple Currencies](#one-exchange--multiple-currencies)
-  * [Multiple Exchanges/ Multiple Currencies](#multiple-exchanges--multiple-currencies)
-- [Potential Enhancements](#potential-enhancements)
-- [Tips](#tips)
-
 A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries on over 38,000 trading pairs
 
-## A Note
-I am currently developing this project in a fork, [Stakedllc/peregrine](https://github.com/Stakedllc/peregrine). That fork is designed to serve a proprietary project, meaning that some functionality may not work for general use cases. I plan to pull some changes from that fork into this one soon, however, I have not yet. If you have a question, please open an issue in which ever repository you use. Be aware that the README in the Stakedllc fork is not up to date; there are several features that are not listed.
+### [Project Status](#project-status) · [Install](#install) · [Usage](#usage) · [Upcoming Changes](#upcoming-changes) 
 
-## Installation
+## Project Status
+I have merged the [previously upstream fork](https://github.com/Stakedllc/peregrine) of the Peregrine into the 
+[`dev` branch](https://github.com/wardbradt/peregrine/tree/dev). I am making changes (discussed [here](#upcoming-changes)) to the project on this
+branch to improve usability and performance. `dev` will be merged into master after the improvements are complete 
+and I have written tests to ensure that everything works as it should. Please create a GitHub issue or contact 
+me (wardbradt5@gmail.com) if there are features you would like.
+
+## Install
 1. Ensure you have [installed pip](https://pip.pypa.io/en/stable/installing/).
 2. Run the following in your command line:
-```
-pip install git+https://github.com/wardbradt/peregrine
-```
 
-## Example Usage
+    ```
+    pip install git+https://github.com/wardbradt/peregrine
+    ```
+    
+    To install from the [development branch](https://github.com/wardbradt/peregrine/tree/dev), run:
+    
+    ```
+    pip install git+https://github.com/wardbradt/peregrine
+    ```
+
+## Usage
 
 This section provides a brief overview of Peregrine's functionality. Examples demonstrating many more features are available in [peregrine/examples](https://github.com/wardbradt/peregrine/tree/master/examples).
 
@@ -166,16 +170,32 @@ USD to BCH at 0.000949667616334283 = 62.61645540736334 on kraken for BCH/USD
 BCH to ETH at 1.8874401 = 118.18480885571941 on bittrex for BCH/ETH
 ```
 
-## Potential Enhancements
+## Upcoming Changes
+### In Development
+The following changes are in progress on the `dev` branch or will be soon.
+##### General
+* Adding logging
+* Upgrade from Python 3.6 -> Python 3.7 to enable compatibility with new ccxt releases. **Done**
+* Improving modularity to enable usage of the library for user-provided price data such as data from non-integrated 
+exchanges or data received via WebSocket.
+* Changing the module structure to separate features and dependencies
+* Deprecating certain features
+* General restructuring and changes to improve usability and performance
 
-* Update cythonperegrine to reflect some of the changes to peregrine, specifically in regards to intra exchange opportunities
-* Implement WebSockets
-* Use scipy instead of networkx for performance
-* Related to the above, implement feature to find maximally profitable arbitrage opportunity.
-* Implement `amount` parameter in bellman_ford to find cycles using at maximum the given amount.
+##### Bellman Ford
+* Adding the functionality of average price (`best_bid` + `best_ask` / 2) instead of best price for triangular arbitrage ([Requested here](https://github.com/wardbradt/peregrine/issues/39))
+* Ensuring all graphs have a "k-core" of 2 to improve performance
+* Adding the functionality to exclude or exclusively include certain currencies ([Requested Here](https://github.com/wardbradt/peregrine/issues/43))
+* Fixing functionality of depth
 
-## Tips
-If you have benefitted from Peregrine and would like to show your appreciation, feel free to send funds to any of the following addresses:
-```
-ETH 0x75B00bA659a6BF735Cf039eE1B04b84fa7a84A83
-```
+### Planned
+These are subject to change. I currently intend to implement them after those listed above are complete. 
+
+##### Bellman Ford
+* Using `scipy` sparse matrices instead of `networkx` graphs to increase Bellman Ford performance
+
+    This is more of an upgrade to scipy than this project. This is because scipy's Bellman Ford implementation currently raises an error if a negative cycle is found--there is no mechanism for retracing the negative cycle.
+
+* Implementing [Yen's improvements](https://en.wikipedia.org/wiki/Bellman%E2%80%93Ford_algorithm#Improvements) to Bellman Ford 
+
+    This will likely be done only after/ while upgrading to scipy so that it isn't done twice.
