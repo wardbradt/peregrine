@@ -1,7 +1,7 @@
 from unittest import TestCase
 from peregrinearb import bellman_ford_multi, multi_digraph_from_json, multi_digraph_from_dict, \
-    calculate_profit_ratio_for_path, bellman_ford, NegativeWeightFinder, NegativeWeightDepthFinder, \
-    print_profit_opportunity_for_path
+    calculate_profit_ratio_for_path, bellman_ford, NegativeWeightFinder, NegativeWeightDepthFinder
+from peregrinearb.bellmannx import get_starting_volume
 import json
 import networkx as nx
 import math
@@ -84,7 +84,102 @@ class TestBellmanFordMultiGraph(TestCase):
 
 class TestBellmannx(TestCase):
 
-    def test_negative_weight_depth_finder(self):
+    def setUp(self):
+        self.edges_a = [
+            # tail node, head node, no_fee_rate, depth (in terms of the first currency), trade_type
+            ['A', 'B', 2, 3, 'SELL'],
+            ['B', 'C', 3, 4, 'SELL'],
+            ['C', 'A', 1 / 5, 14, 'SELL'],
+        ]
+        self.volume_scalar_a = 2 / 3
+
+        self.edges_b = [
+            # tail node, head node, no_fee_rate, depth (in terms of the first currency), trade_type
+            # 5/6, 4/7, 5/6, 3/5
+            ['A', 'B', 2, 3, 'SELL'],
+            # ABC: 5/6 as limited by the price of A and the volume on B/C
+            ['B', 'C', 3, 4, 'SELL'],
+            # BCD:
+            ['C', 'D', 7, 10, 'SELL'],
+            ['D', 'E', 5, 40, 'SELL'],
+            ['E', 'F', 1 / 5, 220, 'SELL'],
+            ['F', 'G', 6, 40, 'SELL'],
+            ['G', 'H', 1 / 20, 200, 'SELL'],
+            ['H', 'A', 1 / 2, 20, 'SELL'],
+        ]
+        self.volume_scalar_b = (2 / 3) * (5 / 6) * (4 / 7) * (5 / 6)
+
+    def test_get_starting_volume_a(self):
+        """
+        A simple test for get_starting_volume. Volume of the initial currency is limited only once. (on the B/C market)
+        """
+        graph = build_graph_from_edge_list(self.edges_a, 0)
+        # the amount of currency A that can be used as limited by the market volumes
+        expected_result = self.edges_a[0][3] * self.volume_scalar_a
+        actual_result = get_starting_volume(graph, ['A', 'B', 'C', 'A'])
+        self.assertAlmostEqual(actual_result, expected_result)
+
+    def test_get_starting_volume_b(self):
+        """
+        Another test for get_starting_volume. Several markets limit the volume of the first currency in the path.
+        """
+        graph = build_graph_from_edge_list(self.edges_b, 0)
+        # the amount of currency A that can be used as limited by the market volumes
+        expected_result = self.edges_b[0][3] * self.volume_scalar_b
+        actual_result = get_starting_volume(graph, [x[0] for x in self.edges_b] + [self.edges_b[0][0]])
+        self.assertAlmostEqual(actual_result, expected_result)
+
+    def test_returned_volume(self):
+        """
+        Tests the volume returned by NegativeWeightDepthFinder.bellman_ford
+        """
+        graph = build_graph_from_edge_list(self.edges_b, 0)
+        finder = NegativeWeightDepthFinder(graph)
+        opportunities = finder.bellman_ford('G', True)
+        opportunities_found = 0
+        for path, volume in opportunities:
+            opportunities_found += 1
+
+            self.assertGreater(len(path), 2, 'assert that there are at least 2 currencies in the path')
+            self.assertGreater(volume, 0, 'assert that the maximum usable volume is at least 0')
+
+            starting_edge_index = -1
+            for i, edge in enumerate(self.edges_b):
+                if edge[4].lower() != 'sell':
+                    raise RuntimeError('This test expects only sell orders. There is an edge which is not a sell '
+                                       'order: {}'.format(edge))
+                if edge[0] == path[0]:
+                    starting_edge_index = i
+                    break
+            # If this fails, something went very wrong or self.edges_b was changed.
+            self.assertNotEqual(starting_edge_index, -1,
+                                'assert that the first currency in the path is a part of an edge in self.edges_b')
+
+            # used because of floating point precision
+            diff_precision = 10 ** -8
+            # how many orders use the maximum amount of possible volume
+            orders_at_volume_capacity = 0
+            for i in range(len(path) - 1):
+                edge = self.edges_b[(starting_edge_index + i) % len(self.edges_b)]
+
+                # difference between usable and used volume
+                maximum_volume_diff = edge[3] - volume
+                try:
+                    self.assertGreater(maximum_volume_diff, -diff_precision,
+                                       'assert that the volume used is less than the volume allowed by the market')
+                except AssertionError as e:
+                    raise e
+                # if the volume used was within 10**-8 of the usable volume
+                if abs(maximum_volume_diff) < diff_precision:
+                    orders_at_volume_capacity += 1
+
+                volume *= edge[2]
+            self.assertGreater(orders_at_volume_capacity, 0,
+                               'assert that all of the volume of at least one market is used')
+        # assert that only one opportunity was found
+        self.assertEqual(opportunities_found, 1)
+
+    def test_negative_weight_depth_finder_a(self):
         """
         Tests NegativeWeightDepthFinder
         """
@@ -168,7 +263,7 @@ class TestBellmannx(TestCase):
             self.assertLess(ratio, 0.0)
 
     def test_negative_weight_depth_finder_c(self):
-        """Tests NegativeWeightDepthFinder as it is used in arbitrag"""
+        """Tests NegativeWeightDepthFinder as it is used for arbitrage"""
         symbols = ['BTC/USD', 'ETH/USD', 'ETH/BTC', 'LTC/BTC', 'LTC/USD', 'ETH/LTC', 'DRC/BTC', 'DRC/ETH']
         markets = {symbol: {
             'volume_increment': 10 ** -8,

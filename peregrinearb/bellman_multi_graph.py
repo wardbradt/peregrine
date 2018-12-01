@@ -1,5 +1,5 @@
 import networkx as nx
-from .bellmannx import NegativeWeightFinder, SeenNodeError
+from .bellmannx import NegativeWeightFinder
 from .utils import get_least_edge_in_bunch
 __all__ = [
     'NegativeWeightFinderMulti',
@@ -28,11 +28,10 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
             # todo: does this indicate that there is a negative cycle beginning and ending with edge[1]? or just that
             # edge[1] connects to a negative cycle?
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                try:
-                    yield self._retrace_negative_loop(edge[1],
-                                                      unique_paths=unique_paths)
-                except SeenNodeError:
+                path = yield self._retrace_negative_cycle(edge[1], unique_paths=unique_paths)
+                if path is None or path is (None, None):
                     continue
+                yield path
 
     def _first_iteration(self):
         """

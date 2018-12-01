@@ -11,7 +11,6 @@ __all__ = [
     'get_exchanges_for_market',
     'build_specific_collections',
     'build_collections',
-    'build_all_collections',
 ]
 
 
@@ -26,7 +25,7 @@ class CollectionBuilder:
         # stores markets which are only available on one exchange: keys are markets names and values are exchange names
         self.singularly_available_markets = {}
 
-    async def async_build_all_collections(self, write=True, ccxt_errors=True, ):
+    async def build_collections(self, write=True, ccxt_errors=True, ):
         """
         Refer to glossary.md for the definition of a "collection"
         :param write: If true, will write collections and singularly_available_markets to json files in /collections
@@ -44,19 +43,6 @@ class CollectionBuilder:
 
             with open(COLLECTIONS_DIR + 'singularly_available_markets.json', 'w') as outfile:
                 json.dump(self.singularly_available_markets, outfile)
-
-        return self.collections
-
-    def build_all_collections(self, write=True, ccxt_errors=True, ):
-        """
-        A synchronous version of async_build_all_collections
-        Refer to glossary.md for the definition of a "collection"
-        :param write: If true, will write collections and singularly_available_markets to json files in /collections
-        :param ccxt_errors: If true, this method will raise the errors ccxt raises
-        :return: A dictionary where keys are market names and values are lists of exchanges which support the respective
-        market name
-        """
-        asyncio.get_event_loop().run_until_complete(self.async_build_all_collections(write, ccxt_errors, ))
 
         return self.collections
 
@@ -228,7 +214,6 @@ class SpecificCollectionBuilder(CollectionBuilder):
                     # this line is A XOR B where A is self.blacklist and B is desired_value not in actual_value
                     if self.blacklist != (actual_value[key_a] != value_a):
                         return False
-
             else:
                 # if desired_value is a list of length 1 and its only element == actual_value (or != if self.blacklist)
                 if isinstance(desired_value, list):
@@ -236,7 +221,6 @@ class SpecificCollectionBuilder(CollectionBuilder):
                         return False
                 elif self.blacklist != (actual_value != desired_value):
                     return False
-
         return True
 
     def _element_of_type_in_list(self, element, actual_value_type, actual_value, key):
@@ -250,46 +234,35 @@ class SpecificCollectionBuilder(CollectionBuilder):
             raise ValueError("Exchange attribute {} is a list of {}s. "
                              "A non-{} object was passed.".format(key, str(actual_value_type),
                                                                   str(actual_value_type)))
-        # this line is A XOR B where A is self.blacklist and B is desired_value not in actual_value
-        if self.blacklist != (element not in actual_value):
-            return False
-
-        return True
+        return self.blacklist == (element not in actual_value)
 
 
-def build_collections(blacklist=False, write=True, ccxt_errors=True):
-    return build_specific_collections(blacklist, write,
-                                      ccxt_errors, has={'fetchOrderBook': True})
-
-
-def build_specific_collections(blacklist=False, write=False, ccxt_errors=True, **kwargs):
+async def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, **kwargs):
     builder = SpecificCollectionBuilder(blacklist, **kwargs)
-    return builder.build_all_collections(write, ccxt_errors)
+    return await builder.build_collections(write, ccxt_errors)
 
 
-def build_all_collections(write=True, ccxt_errors=True, exchanges=None):
-    """
-    Be careful when using this. build_collections is typically preferred over this method because build_collections only
-    accounts for exchanges which have a private API (and thus can be traded on).
-    """
-    builder = CollectionBuilder(exchanges=exchanges)
-    return builder.build_all_collections(write=write, ccxt_errors=ccxt_errors)
+async def build_collections(exchanges=None, write=True, ccxt_errors=False):
+    return await CollectionBuilder(exchanges).build_collections(write, ccxt_errors)
 
 
-def get_exchanges_for_market(market_ticker):
+async def get_exchanges_for_market(symbol, collections_dir='./'):
     """
     Returns the list of exchanges on which a market is traded
     """
-    with open(COLLECTIONS_DIR + 'collections.json') as f:
-        collections = json.load(f)
-    for market_name, exchanges in collections.items():
-        if market_name == market_ticker:
-            return exchanges
+    try:
+        with open('{}collections.json'.format(collections_dir)) as f:
+            collections = json.load(f)
+        for market_name, exchanges in collections.items():
+            if market_name == symbol:
+                return exchanges
+    except FileNotFoundError:
+        return await build_specific_collections(symbols=[symbol])
 
-    with open(COLLECTIONS_DIR + 'singularly_available_markets.json') as f:
+    with open('{}singularly_available_markets.json'.format(collections_dir)) as f:
         singularly_available_markets = json.load(f)
     for market_name, exchange in singularly_available_markets:
-        if market_name == market_ticker:
+        if market_name == symbol:
             return [exchange]
 
-    raise ExchangeNotInCollectionsError(market_ticker)
+    raise ExchangeNotInCollectionsError(symbol)

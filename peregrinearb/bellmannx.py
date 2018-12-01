@@ -1,7 +1,7 @@
 import math
 import networkx as nx
-from .utils import last_index_in_list, FormatForLogAdapter
-import asyncio
+from .utils import last_index_in_list
+from utils.logging_utils import FormatForLogAdapter
 from .utils import load_exchange_graph
 import logging
 __all__ = [
@@ -10,13 +10,8 @@ __all__ = [
     'bellman_ford',
     'find_opportunities_on_exchange',
     'calculate_profit_ratio_for_path',
-    'SeenNodeError',
     'get_starting_volume',
 ]
-
-
-class SeenNodeError(Exception):
-    pass
 
 
 adapter = FormatForLogAdapter(logging.getLogger('peregrinearb.bellmannx'))
@@ -34,32 +29,39 @@ class NegativeWeightFinder:
         self.seen_nodes = set()
 
     def reset_all_but_graph(self):
+        """
+        Call this to look for opportunities after updating the graph
+        """
         self.predecessor_to = {}
         self.distance_to = {}
 
         self.seen_nodes = set()
 
-    def _set_basic_fields(self, node):
-        # todo: change predecessor_to to a dict and get rid of loop_from_source
-        # Initialize all distance_to values to infinity and all predecessor_to values to None
-        self.distance_to[node] = float('Inf')
-        self.predecessor_to[node] = None
-
     def initialize(self, source):
         for node in self.graph:
-            self._set_basic_fields(node)
+            # Initialize all distance_to values to infinity and all predecessor_to values to None
+            self.distance_to[node] = float('Inf')
+            self.predecessor_to[node] = None
 
         # The distance from any node to (itself) == 0
         self.distance_to[source] = 0
 
-    def bellman_ford(self, source, unique_paths=True):
+    def bellman_ford(self, source='BTC', unique_paths=True):
         """
-        :param unique_paths: If true, ensures that no duplicate paths are returned.
-        """
-        if source not in self.graph:
-            raise ValueError('source {} not in graph'.format(source))
+        Finds arbitrage opportunities in self.graph and yields them
 
-        adapter.debug('Running bellman_ford')
+        Parameters
+        ----------
+        source
+            A node (currency) in self.graph. Opportunities will be yielded only if they are "reachable" from source.
+            Reachable means that a series of trades can be executed to buy one of the currencies in the opportunity.
+            For the most part, it does not matter what the value of source is, because typically any currency can be
+            reached from any other via only a few trades.
+        unique_paths : bool
+            unique_paths: If True, each opportunity is not yielded more than once
+        :return: a generator of profitable (negatively-weighted) arbitrage paths in self.graph
+        """
+        adapter.info('Running bellman_ford')
         self.initialize(source)
 
         adapter.debug('Relaxing edges')
@@ -71,86 +73,84 @@ class NegativeWeightFinder:
                 self.relax(edge)
         adapter.debug('Finished relaxing edges')
 
-        paths = self._check_final_condition(unique_paths=unique_paths)
-
-        adapter.debug('Ran bellman_ford')
-        return paths
-
-    def _check_final_condition(self, **kwargs):
-        """
-        NegativeWeightFinder and its children execute the Bellman-Ford algorithm or some variation of it. A main
-        variation among the classes is the "final condition," which typically checks whether or not a negative cycle
-        exists using that class's specific parameters. If the final condition is true, _check_final_condition returns
-        a generator which should yield paths in self.graph.
-
-        For the NegativeWeightFinder class, the final condition is whether or not a negative cycle exists. If this
-        condition is true, this method will yield negatively weighted paths.
-
-        All subclasses of NegativeWeightFinder should return a generator of paths which satisfy the final condition. If
-        subclassing NegativeWeightFinder and overriding _check_final_condition and planning to publish this subclass, it
-        is helpful to describe in the docstring what the final condition is and, if not negative cycles, what the
-        method's returned generator yields.
-        """
-        adapter.debug('Checking final condition')
         for edge in self.graph.edges(data=True):
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                try:
-                    path = self._retrace_negative_loop(edge[1], unique_paths=kwargs['unique_paths'])
-                except SeenNodeError:
-                    adapter.debug('SeenNodeError raised')
+                if unique_paths and edge[1] in self.seen_nodes:
                     continue
-
-                adapter.debug('Yielding path', path=str(path))
+                path = self._retrace_negative_cycle(edge[1], unique_paths)
+                if path is None or path is (None, None):
+                    continue
                 yield path
 
+        adapter.info('Ran bellman_ford')
+
     def relax(self, edge):
-        adapter.debug('Relaxing edge', fromnode=edge[1], tonode=edge[0])
         if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
             self.distance_to[edge[1]] = self.distance_to[edge[0]] + edge[2]['weight']
             self.predecessor_to[edge[1]] = edge[0]
 
         return True
 
-    def _retrace_negative_loop(self, start, unique_paths=False):
+    def _retrace_negative_cycle(self, start, unique_paths):
         """
-        :return: negative loop path
-        """
-        adapter.debug('Retracing loops')
-        if unique_paths and start in self.seen_nodes:
-            raise SeenNodeError
+        Retraces an arbitrage opportunity (negative cycle) which a currency can reach and returns it.
 
+        Parameters
+        ----------
+        start
+            A node (currency) from which it is known an arbitrage opportunity is reachable
+        unique_paths : bool
+            unique_paths: If True, no duplicate opportunities are returned
+
+        Returns
+        -------
+        list
+            An arbitrage opportunity reachable from start. Value is None if seen_nodes is True and a
+            duplicate opportunity would be returned.
+        """
         arbitrage_loop = [start]
-        next_node = start
+        prior_node = start
         while True:
-            next_node = self.predecessor_to[next_node]
+            prior_node = self.predecessor_to[prior_node]
             # if negative cycle is complete
-            if next_node in arbitrage_loop:
-                arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, next_node) + 1]
-                arbitrage_loop.insert(0, next_node)
+            if prior_node in arbitrage_loop:
+                arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, prior_node) + 1]
+                arbitrage_loop.insert(0, prior_node)
                 return arbitrage_loop
 
-            # if next_node in arbitrage_loop, next_node in self.seen_nodes. thus, this conditional must proceed
-            # checking if next_node in arbitrage_loop
-            if unique_paths and next_node in self.seen_nodes:
-                raise SeenNodeError(next_node)
+            # because if prior_node is in arbitrage_loop prior_node must be in self.seen_nodes. thus, this conditional
+            # must proceed checking if prior_node is in arbitrage_loop
+            if unique_paths and prior_node in self.seen_nodes:
+                return None
 
-            arbitrage_loop.insert(0, next_node)
-            self.seen_nodes.add(next_node)
+            arbitrage_loop.insert(0, prior_node)
+            self.seen_nodes.add(prior_node)
 
 
 class NegativeWeightDepthFinder(NegativeWeightFinder):
 
-    def _retrace_negative_loop(self, start, unique_paths=False):
+    def _retrace_negative_cycle(self, start, unique_paths):
         """
-        Unlike NegativeWeightFinder's _retrace_negative_loop, this returns a dict structured as
-        {'loop': arbitrage_loop, 'minimum' : minimum}, where arbitrage_loop is a negatively-weighted cycle and minimum
-        is the least weight that can be started with at source.
+        Retraces an arbitrage opportunity (negative cycle) which a currency can reach and calculates the
+        maximum amount of the first currency in the arbitrage opportunity that can be used to execute the opportunity.
+
+        Parameters
+        ----------
+        start
+            A node (currency) from which it is known an arbitrage opportunity is reachable
+        unique_paths : bool`
+            unique_paths: If True, no duplicate opportunities are returned
+
+        Returns
+        -------
+        2-tuple
+            [0] : list
+                An arbitrage opportunity reachable from start. Value is None if seen_nodes is True and a
+                duplicate opportunity would be returned.
+            [1] : float
+                The maximum amount of the first currency in the arbitrage opportunity that can be used to execute
+                the opportunity. Value is None if seen_nodes is True and a duplicate opportunity would be returned.
         """
-        if unique_paths and start in self.seen_nodes:
-            raise SeenNodeError
-
-        adapter.debug('Retracing loops')
-
         arbitrage_loop = [start]
         prior_node = self.predecessor_to[arbitrage_loop[0]]
         # the minimum weight which can be transferred without being limited by edge depths
@@ -158,7 +158,7 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
         arbitrage_loop.insert(0, prior_node)
         while True:
             if arbitrage_loop[0] in self.seen_nodes and unique_paths:
-                raise SeenNodeError
+                return None, None
             self.seen_nodes.add(prior_node)
 
             prior_node = self.predecessor_to[arbitrage_loop[0]]
@@ -175,12 +175,12 @@ class NegativeWeightDepthFinder(NegativeWeightFinder):
                 arbitrage_loop = arbitrage_loop[:last_index_in_list(arbitrage_loop, prior_node) + 1]
                 arbitrage_loop.insert(0, prior_node)
                 adapter.info('Retraced loop')
-                return {'loop': arbitrage_loop, 'minimum': minimum}
+                return arbitrage_loop, math.exp(-minimum)
 
             arbitrage_loop.insert(0, prior_node)
 
 
-def bellman_ford(graph, source, unique_paths=False):
+def bellman_ford(graph, source='BTC', unique_paths=True, depth=False):
     """
     Look at the docstring of the bellman_ford method in the NegativeWeightFinder class. (This is a static wrapper
     function.)
@@ -188,19 +188,15 @@ def bellman_ford(graph, source, unique_paths=False):
     If depth is true, yields all negatively weighted paths (accounting for depth) when starting with a weight of
     starting_amount.
     """
-    return NegativeWeightFinder(graph).bellman_ford(source, unique_paths)
-
-
-def find_opportunities_on_exchange(exchange_name, source, unique_paths=False, depth=False):
-    """
-    A high level function to find intraexchange arbitrage opportunities on a specified exchange.
-    """
-    graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph(exchange_name, depth=depth))
     if depth:
-        finder = NegativeWeightDepthFinder(graph)
-        return finder.bellman_ford(source, unique_paths)
+        return NegativeWeightDepthFinder(graph).bellman_ford(source, unique_paths)
+    else:
+        return NegativeWeightFinder(graph).bellman_ford(source, unique_paths)
 
-    return bellman_ford(graph, source, unique_paths)
+
+async def find_opportunities_on_exchange(exchange_name, source='BTC', unique_paths=True, depth=False):
+    graph = await load_exchange_graph(exchange_name, source, unique_paths, depth)
+    return bellman_ford(graph, source, unique_paths, depth)
 
 
 def get_starting_volume(graph, path):
@@ -210,13 +206,18 @@ def get_starting_volume(graph, path):
     start = path[0]
     end = path[1]
     initial_volume = math.exp(-graph[start][end]['depth'])
+    # the amount of start that can be traded for end at the best price as limited by the previous volumes of the markets
+    # in the opportunity
     previous_volume = initial_volume * math.exp(-graph[start][end]['weight'])
     for i in range(1, len(path) - 1):
         start = path[i]
         end = path[i + 1]
+        # the amount of start that can be traded for end at the best price
         current_max_volume = math.exp(-graph[start][end]['depth'])
         if previous_volume > current_max_volume:
             volume_scalar *= current_max_volume / previous_volume
+            # volume_scalar = min(current_max_volume / previous_volume, volume_scalar)
+            previous_volume = current_max_volume
         previous_volume *= math.exp(-graph[start][end]['weight'])
     return initial_volume * volume_scalar
 

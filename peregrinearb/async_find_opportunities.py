@@ -4,14 +4,15 @@ import asyncio
 import logging
 from .settings import INTER_LOGGING_PATH
 import datetime
-from .utils import format_for_log, Collections
+from .utils import Collections
+from utils.logging_utils import FormatForLogAdapter
+
 __all__ = [
     'OpportunityFinder',
     'SuperOpportunityFinder',
     'get_opportunity_for_market',
     'get_opportunities_for_collection',
 ]
-
 
 file_logger = logging.getLogger(INTER_LOGGING_PATH + __name__)
 
@@ -84,8 +85,8 @@ class OpportunityFinder:
         if ask < self.lowest_ask['price']:
             self.lowest_ask['price'] = ask
             self.lowest_ask['exchange'] = exchange
-        self.adapter.info('Checked if {} qualifies for the highest bid or lowest ask for {}'.format(exchange.id,
-                                                                                                    self.market_name))
+        self.adapter.info('Checked if exchange qualifies for the highest bid or lowest ask for market',
+                          exchange=exchange.id, symbol=self.market_name)
 
     async def find_min_max(self):
         tasks = [self._test_bid_and_ask(exchange_name) for exchange_name in self.exchange_list]
@@ -107,7 +108,7 @@ class SuperInterExchangeAdapter(logging.LoggerAdapter):
 
 class SuperOpportunityFinder:
 
-    def __init__(self, exchanges, collections, name=True, invocation_id=0, opportunity_id=0, get_usd_rates=False,
+    def __init__(self, exchanges, collections, name=True, opportunity_id=0, get_usd_rates=False,
                  opportunity_interval=0.05):
         """
         SuperOpportunityFinder, given a dict of collections, yields opportunities in the order they come. There is not
@@ -122,8 +123,8 @@ class SuperOpportunityFinder:
         self.collections field will be a Collections object.
         :param name: True if exchanges is a list of strings, False if it is a list of ccxt.Exchange objects
         """
-        logger = logging.getLogger(INTER_LOGGING_PATH + __name__)
-        self.adapter = SuperInterExchangeAdapter(logger, {'invocation_id': invocation_id})
+        self.adapter = FormatForLogAdapter(
+            logging.getLogger('peregrinearb.async_find_opportunities.SuperOpportunityFinder'))
         self.adapter.debug('Initializing SuperOpportunityFinder')
         if name:
             self.exchanges = {e: getattr(ccxt, e)() for e in exchanges}
@@ -188,15 +189,15 @@ class SuperOpportunityFinder:
         # Try again in 100 milliseconds if any of the exchanges in exchange_list are currently rate limited.
         for e in exchange_list:
             if e in self.rate_limited_exchanges:
-                self.adapter.info(format_for_log('Sleeping asynchronously because exchange was rate limited',
-                                                 exchange=e, sleeptime=0.1, ))
+                self.adapter.info('Sleeping asynchronously because exchange was rate limited',
+                                  exchange=e, sleeptime=0.1, )
                 await asyncio.sleep(0.1)
                 return await self._find_opportunity(market_name, exchange_list)
 
         if return_prices:
             prices = {}
 
-        self.adapter.info(format_for_log('Finding opportunity', opportunity=current_opp_id, market=market_name, ))
+        self.adapter.info('Finding opportunity', opportunity=current_opp_id, market=market_name, )
         opportunity = {
             'highest_bid': {'price': -1, 'exchange': None, 'volume': 0},
             'lowest_ask': {'price': float('Inf'), 'exchange': None, 'volume': 0},
@@ -246,7 +247,7 @@ class SuperOpportunityFinder:
                 opportunity['lowest_ask']['exchange'] = exchange_name
                 opportunity['lowest_ask']['volume'] = order_book['asks'][0][1]
 
-        self.adapter.info(format_for_log('Found opportunity', opportunity=current_opp_id, market=market_name))
+        self.adapter.info('Found opportunity', opportunity=current_opp_id, market=market_name)
         if return_prices:
             return opportunity, prices
         return opportunity
@@ -257,41 +258,37 @@ class SuperOpportunityFinder:
         ticker is None if an order book with bids and asks was not returned by fetch_order_book
         exchange_name is None if an unavoidable error was raised or the order book has no bids or no asks
         """
-        self.adapter.debug(format_for_log('Fetching ticker', opportunity=current_opp_id,
-                                          exchange=exchange_name, market=market_name))
+        self.adapter.debug('Fetching ticker', opportunity=current_opp_id,
+                           exchange=exchange_name, market=market_name)
         try:
             order_book = await self.exchanges[exchange_name].fetch_order_book(market_name)
         except ccxt.DDoSProtection:
-            self.adapter.warning(format_for_log('Rate limited for inter-exchange opportunity',
-                                                opportunity=current_opp_id,
-                                                exchange=exchange_name,
-                                                market=market_name))
+            self.adapter.warning('Rate limited for inter-exchange opportunity',
+                                 opportunity=current_opp_id,
+                                 exchange=exchange_name,
+                                 market=market_name)
             return None, exchange_name
         except ccxt.RequestTimeout:
-            self.adapter.warning(format_for_log('Request timeout for inter-exchange opportunity.',
-                                                opportunity=current_opp_id,
-                                                exchange=exchange_name,
-                                                market=market_name))
+            self.adapter.warning('Request timeout for inter-exchange opportunity.',
+                                 opportunity=current_opp_id,
+                                 exchange=exchange_name,
+                                 market=market_name)
             return None, exchange_name
         # If the exchange no longer has the specified market
         except ccxt.ExchangeError:
-            self.adapter.warning(format_for_log('Fetching ticker raised an ExchangeError.',
-                                                opportunity=current_opp_id,
-                                                exchange=exchange_name,
-                                                market=market_name))
-            self.adapter.info(format_for_log('Removing exchange from market', exchange=exchange_name,
-                                             market=market_name, opportunity=current_opp_id, ))
+            self.adapter.warning('Fetching ticker raised an ExchangeError.', opportunity=current_opp_id,
+                                 exchange=exchange_name, market=market_name)
+            self.adapter.info('Removing exchange from market', exchange=exchange_name,
+                              market=market_name, opportunity=current_opp_id, )
             self.collections.remove_exchange_from_market(exchange_name, market_name)
             return None, None
         except ccxt.ExchangeNotAvailable:
-            self.adapter.warning(format_for_log('Fetching ticker raised an ExchangeNotAvailable error.',
-                                                opportunity=current_opp_id,
-                                                exchange=exchange_name,
-                                                market=market_name))
+            self.adapter.warning('Fetching ticker raised an ExchangeNotAvailable error.', opportunity=current_opp_id,
+                                 exchange=exchange_name, market=market_name)
             return None, None
 
         if order_book['bids'] == [] or order_book['asks'] == []:
-            self.adapter.debug(format_for_log('No asks or no bids', exchange=exchange_name, market=market_name))
+            self.adapter.debug('No asks or no bids', exchange=exchange_name, market=market_name)
             return None, None
 
         if self.get_usd_rates:
@@ -300,8 +297,8 @@ class SuperOpportunityFinder:
             if cap_currency_index > 0:
                 self._add_to_rates_dict(exchange_name, market_name, order_book['bids'][0][0])
 
-        self.adapter.debug(format_for_log('Fetched ticker', opportunity=current_opp_id, exchange=exchange_name,
-                                          market=market_name))
+        self.adapter.debug('Fetched ticker', opportunity=current_opp_id, exchange=exchange_name,
+                           market=market_name)
         return order_book, exchange_name
 
     def _add_to_rates_dict(self, exchange_name, market_name, price):

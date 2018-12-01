@@ -17,10 +17,9 @@ class ExchangeMultiGraphBuilder:
         self.exchanges = exchanges
         self.graph = nx.MultiGraph()
 
-    def build_multi_graph(self, write=False, ccxt_errors=True):
-        futures = [asyncio.ensure_future(self._add_exchange_to_graph(exchange_name, ccxt_errors)) for
-                   exchange_name in self.exchanges]
-        asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
+    async def build_multi_graph(self, write=False, ccxt_errors=True):
+        await asyncio.wait([self._add_exchange_to_graph(exchange_name, ccxt_errors) for
+                 exchange_name in self.exchanges])
 
         if write:
             with open(COLLECTIONS_DIR + 'graph.json', 'w') as outfile:
@@ -55,16 +54,16 @@ class ExchangeMultiGraphBuilder:
                 pass
 
 
-def build_multi_graph_for_exchanges(exchanges: list):
+async def build_multi_graph_for_exchanges(exchanges: list, **kwargs):
     """
     A wrapper function for the usage of the ExchangeMultiGraphBuilder class which returns a dict as specified in the
     docstring of __init__ in ExchangeMultiGraphBuilder.
     :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
     """
-    return ExchangeMultiGraphBuilder(exchanges).build_multi_graph()
+    return await ExchangeMultiGraphBuilder(exchanges).build_multi_graph(**kwargs)
 
 
-def build_arbitrage_graph_for_exchanges(exchanges: list, k_core=2):
+async def build_arbitrage_graph_for_exchanges(exchanges: list):
     """
     This function is currently inefficient as it finds the entire graph for the given exchanges then finds the k-core
     for that graph. todo: It would be great if someone could improve the efficiency of it but this is not a priority.
@@ -73,6 +72,6 @@ def build_arbitrage_graph_for_exchanges(exchanges: list, k_core=2):
     function in networkx.algorithms.core.py must be removed or commented out.
     Todo: Improve this project so that the above does not have to be done.
 
-    :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
+    :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'gdax']
     """
-    return nx.k_core(build_multi_graph_for_exchanges(exchanges), k_core)
+    return nx.k_core(build_multi_graph_for_exchanges(exchanges), 2)
