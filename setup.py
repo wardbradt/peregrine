@@ -1,14 +1,14 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(
     name='peregrinearb',
-    version='1.6.18-0.0.1',
-    description='A Python library which provides several algorithms to detect arbitrage opportunities across over 90 '
-                'cryptocurrency markets in 34 countries',
+    version='1.7.0-0.0.1',
+    description='A Python library which provides several algorithms to detect arbitrage opportunities across over 132 '
+                'cryptocurrency markets in over 50 countries',
     author='Ward Bradt',
     author_email='wardbradt5@gmail.com',
-    packages=['peregrinearb', 'peregrinearb.utils', 'peregrinearb.tests'],
+    packages=find_packages(),
     license='MIT',
     url='https://github.com/Stakedllc/peregrine/',
 )
