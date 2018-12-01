@@ -1,7 +1,7 @@
 import asyncio
 import math
 import networkx as nx
-import ccxt.async_support as ccxt
+from ccxt import async_support as ccxt
 import warnings
 __all__ = [
     'create_multi_exchange_graph',
@@ -56,7 +56,10 @@ def create_weighted_multi_exchange_digraph(exchanges: list, name=True, log=False
     else:
         exchanges = [{'object': exchange} for exchange in exchanges]
 
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.get_running_loop()
     futures = [asyncio.ensure_future(exchange_dict['object'].load_markets()) for exchange_dict in exchanges]
     loop.run_until_complete(asyncio.gather(*futures))
 
