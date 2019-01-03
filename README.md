@@ -22,7 +22,7 @@ me (wardbradt5@gmail.com) if there are features you would like.
     To install from the [development branch](https://github.com/wardbradt/peregrine/tree/dev), run:
     
     ```
-    pip install git+https://github.com/wardbradt/peregrine
+    pip install git+https://github.com/wardbradt/peregrine@dev
     ```
 
 ## Usage
