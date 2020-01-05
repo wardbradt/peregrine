@@ -1,8 +1,7 @@
 import math
 import networkx as nx
-from .utils import last_index_in_list
-from utils.logging_utils import FormatForLogAdapter
-from .utils import load_exchange_graph
+from .utils import last_index_in_list, load_exchange_graph
+from .utils.logging_utils import FormatForLogAdapter
 import logging
 __all__ = [
     'NegativeWeightFinder',
@@ -78,7 +77,7 @@ class NegativeWeightFinder:
                 if unique_paths and edge[1] in self.seen_nodes:
                     continue
                 path = self._retrace_negative_cycle(edge[1], unique_paths)
-                if path is None or path is (None, None):
+                if path is None or path == (None, None):
                     continue
                 yield path
 

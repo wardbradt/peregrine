@@ -1,3 +1,4 @@
+import os
 from unittest import TestCase
 from peregrinearb import bellman_ford_multi, multi_digraph_from_json, multi_digraph_from_dict, \
     calculate_profit_ratio_for_path, bellman_ford, NegativeWeightFinder, NegativeWeightDepthFinder
@@ -63,7 +64,9 @@ def build_graph_from_edge_list(edges, fee):
 class TestBellmanFordMultiGraph(TestCase):
 
     def test_path_beginning_equals_end(self):
-        graph = multi_digraph_from_json('test_multigraph.json')
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        graph = multi_digraph_from_json(os.path.join(__location__, 'test_multigraph.json'))
         for node in graph:
             new_graph, paths = bellman_ford_multi(graph, node)
             for path in paths:
@@ -71,7 +74,9 @@ class TestBellmanFordMultiGraph(TestCase):
                     self.assertEqual(path[0], path[-1])
 
     def test_positive_ratio(self):
-        graph = multi_digraph_from_json('test_multigraph.json')
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        graph = multi_digraph_from_json(os.path.join(__location__, 'test_multigraph.json'))
         for node in graph:
             new_graph, paths = bellman_ford_multi(graph, node)
             for path in paths:
@@ -215,13 +220,13 @@ class TestBellmannx(TestCase):
                 with self.assertRaises(StopIteration):
                     paths.__next__()
 
-            for path in paths:
+            for path, starting_amount in paths:
                 # assert that if a path is found, only one is found.
                 with self.assertRaises(StopIteration):
                     paths.__next__()
 
-                ratio = calculate_profit_ratio_for_path(graph, path['loop'], depth=True,
-                                                        starting_amount=math.exp(-path['minimum']))
+                ratio = calculate_profit_ratio_for_path(graph, path, depth=True,
+                                                        starting_amount=starting_amount)
 
                 self.assertAlmostEqual(ratio, edge_ratio)
 
@@ -258,8 +263,8 @@ class TestBellmannx(TestCase):
                 total += graph[start][end]['weight']
             return total
 
-        for path in paths:
-            ratio = calculate_ratio(path['loop'])
+        for path, starting_amount in paths:
+            ratio = calculate_ratio(path)
             self.assertLess(ratio, 0.0)
 
     def test_negative_weight_depth_finder_c(self):

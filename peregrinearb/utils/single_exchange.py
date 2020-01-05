@@ -4,7 +4,7 @@ import networkx as nx
 import ccxt.async_support as ccxt
 import datetime
 import logging
-from utils.logging_utils import FormatForLogAdapter
+from .logging_utils import FormatForLogAdapter
 __all__ = [
     'FeesNotAvailable',
     'create_exchange_graph',

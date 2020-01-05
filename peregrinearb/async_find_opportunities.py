@@ -5,7 +5,7 @@ import logging
 from .settings import INTER_LOGGING_PATH
 import datetime
 from .utils import Collections
-from utils.logging_utils import FormatForLogAdapter
+from .utils.logging_utils import FormatForLogAdapter
 
 __all__ = [
     'OpportunityFinder',
