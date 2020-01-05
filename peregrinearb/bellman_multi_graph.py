@@ -13,7 +13,7 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
         super(NegativeWeightFinderMulti, self).__init__(graph)
         self.new_graph = nx.DiGraph()
 
-    def bellman_ford(self, source, unique_paths=False):
+    def bellman_ford(self, source='BTC', unique_paths=True):
         self.initialize(source)
 
         # on first iteration, load market prices.
@@ -56,11 +56,11 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
             self.predecessor_to[edge_bunch[1]] = edge_bunch[0]
 
 
-def bellman_ford_multi(graph: nx.MultiGraph, source, unique_paths=False):
+def bellman_ford_multi(graph: nx.MultiGraph, source, unique_paths=True):
     """
     Returns a 2-tuple containing the graph with most negative weights in every edge bunch and a generator which iterates
     over the negative cycle in graph
     """
     finder = NegativeWeightFinderMulti(graph)
-    paths = finder.bellman_ford(source, unique_paths=unique_paths)
+    paths = finder.bellman_ford(source, unique_paths)
     return finder.new_graph, paths
