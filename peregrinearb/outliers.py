@@ -17,7 +17,7 @@ class OutlierDetector:
         except ccxt.AuthenticationError:
             return None
         except ccxt.RequestTimeout:
-            print("request timeout: " + exchange_name + " in " + time.time() - start_time + " seconds")
+            print("request timeout: " + str(exchange_name) + " in " + str(time.time() - start_time) + " seconds")
             return None
         except ccxt.ExchangeNotAvailable:
             return None

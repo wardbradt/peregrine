@@ -1,6 +1,10 @@
 import networkx as nx
-from .bellmannx import NegativeWeightFinder, SeenNodeError
+from .bellmannx import NegativeWeightFinder
 from .utils import get_least_edge_in_bunch
+__all__ = [
+    'NegativeWeightFinderMulti',
+    'bellman_ford_multi',
+]
 
 
 class NegativeWeightFinderMulti(NegativeWeightFinder):
@@ -9,7 +13,7 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
         super(NegativeWeightFinderMulti, self).__init__(graph)
         self.new_graph = nx.DiGraph()
 
-    def bellman_ford(self, source, loop_from_source=True, ensure_profit=False, unique_paths=False):
+    def bellman_ford(self, source='BTC', unique_paths=True):
         self.initialize(source)
 
         # on first iteration, load market prices.
@@ -24,14 +28,10 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
             # todo: does this indicate that there is a negative cycle beginning and ending with edge[1]? or just that
             # edge[1] connects to a negative cycle?
             if self.distance_to[edge[0]] + edge[2]['weight'] < self.distance_to[edge[1]]:
-                try:
-                    yield self._retrace_negative_loop(edge[1],
-                                                      loop_from_source=loop_from_source,
-                                                      source=source,
-                                                      ensure_profit=ensure_profit,
-                                                      unique_paths=unique_paths)
-                except SeenNodeError:
+                path = yield self._retrace_negative_cycle(edge[1], unique_paths=unique_paths)
+                if path is None or path is (None, None):
                     continue
+                yield path
 
     def _first_iteration(self):
         """
@@ -53,21 +53,14 @@ class NegativeWeightFinderMulti(NegativeWeightFinder):
         # todo: these conditionals are rarely both true. how to detect when this is the case?
         if self.distance_to[edge_bunch[0]] + ideal_edge['weight'] < self.distance_to[edge_bunch[1]]:
             self.distance_to[edge_bunch[1]] = self.distance_to[edge_bunch[0]] + ideal_edge['weight']
-        self.predecessor_to[edge_bunch[1]].add(edge_bunch[0],
-                                               self.distance_to[edge_bunch[0]] + ideal_edge['weight'])
-
-        if self.distance_from[edge_bunch[1]] + ideal_edge['weight'] < self.distance_from[edge_bunch[0]]:
-            self.distance_from[edge_bunch[0]] = self.distance_from[edge_bunch[1]] + ideal_edge['weight']
-        self.predecessor_from[edge_bunch[0]].add(edge_bunch[1],
-                                                 self.distance_from[edge_bunch[1]] + ideal_edge['weight'])
+            self.predecessor_to[edge_bunch[1]] = edge_bunch[0]
 
 
-def bellman_ford_multi(graph: nx.MultiGraph, source, loop_from_source=False, ensure_profit=False, unique_paths=False):
+def bellman_ford_multi(graph: nx.MultiGraph, source, unique_paths=True):
     """
     Returns a 2-tuple containing the graph with most negative weights in every edge bunch and a generator which iterates
     over the negative cycle in graph
     """
     finder = NegativeWeightFinderMulti(graph)
-    paths = finder.bellman_ford(source, loop_from_source=loop_from_source, ensure_profit=ensure_profit,
-                                unique_paths=unique_paths)
+    paths = finder.bellman_ford(source, unique_paths)
     return finder.new_graph, paths
