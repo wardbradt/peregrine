@@ -1,5 +1,5 @@
 from unittest import TestCase
-from utils import misc
+from peregrinearb.utils import misc
 
 
 class TestMisc(TestCase):

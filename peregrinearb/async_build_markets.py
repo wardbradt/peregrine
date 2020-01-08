@@ -1,36 +1,31 @@
 import ccxt.async_support as ccxt
 import asyncio
 import json
-import networkx as nx
 from .utils.general import ExchangeNotInCollectionsError
-
+from .settings import COLLECTIONS_DIR
 
 __all__ = [
     'CollectionBuilder',
+    'SymbolCollectionBuilder',
     'SpecificCollectionBuilder',
-    'ExchangeMultiGraphBuilder',
-    'build_multi_graph_for_exchanges',
-    'build_arbitrage_graph_for_exchanges',
-    'build_all_collections',
-    'build_collections',
-    'async_build_all_collections',
-    'async_get_exchanges_for_market',
-    'async_build_specific_collections',
-    'build_specific_collections',
     'get_exchanges_for_market',
+    'build_specific_collections',
+    'build_collections',
 ]
 
 
 class CollectionBuilder:
 
-    def __init__(self):
-        self.exchanges = ccxt.exchanges
+    def __init__(self, exchanges=None):
+        if exchanges is None:
+            exchanges = ccxt.exchanges
+        self.exchanges = exchanges
         # keys are market names and values are an array of names of exchanges which support that market
         self.collections = {}
         # stores markets which are only available on one exchange: keys are markets names and values are exchange names
         self.singularly_available_markets = {}
 
-    async def async_build_all_collections(self, write=True, ccxt_errors=False, collections_dir='./'):
+    async def build_collections(self, write=True, ccxt_errors=True, ):
         """
         Refer to glossary.md for the definition of a "collection"
         :param write: If true, will write collections and singularly_available_markets to json files in /collections
@@ -38,55 +33,105 @@ class CollectionBuilder:
         :return: A dictionary where keys are market names and values are lists of exchanges which support the respective
         market name
         """
-        tasks = [self._add_exchange_to_collections(exchange_name, ccxt_errors) for exchange_name in self.exchanges]
+        tasks = [self._add_exchange_to_collections(exchange, ccxt_errors, ) for exchange
+                 in self.exchanges]
         await asyncio.wait(tasks)
 
         if write:
-            with open('{}collections.json'.format(collections_dir), 'w') as outfile:
+            with open(COLLECTIONS_DIR + 'collections.json', 'w') as outfile:
                 json.dump(self.collections, outfile)
 
-            with open('{}singularly_available_markets.json'.format(collections_dir), 'w') as outfile:
+            with open(COLLECTIONS_DIR + 'singularly_available_markets.json', 'w') as outfile:
                 json.dump(self.singularly_available_markets, outfile)
 
         return self.collections
 
-    def build_all_collections(self, write=True, ccxt_errors=False, collections_dir='./'):
-        """
-        A synchronous version of async_build_all_collections
-        Refer to glossary.md for the definition of a "collection"
-        :param write: If true, will write collections and singularly_available_markets to json files in /collections
-        :param ccxt_errors: If true, this method will raise the errors ccxt raises
-        :return: A dictionary where keys are market names and values are lists of exchanges which support the respective
-        market name
-        """
-
-        asyncio.get_event_loop().run_until_complete(
-            self.async_build_all_collections(write, ccxt_errors, collections_dir)
-        )
-
-        return self.collections
-
-    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
+    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False, ):
         exchange = getattr(ccxt, exchange_name)()
-        if ccxt_errors:
+        try:
             await exchange.load_markets()
             await exchange.close()
-        else:
-            try:
-                await exchange.load_markets()
+        except ccxt.BaseError as e:
+            if ccxt_errors:
                 await exchange.close()
-            except ccxt.BaseError:
-                await exchange.close()
-                return
+                raise e
+            return
 
-        for market_name in exchange.symbols:
-            if market_name in self.collections:
-                self.collections[market_name].append(exchange_name)
-            elif market_name in self.singularly_available_markets:
-                self.collections[market_name] = [self.singularly_available_markets[market_name], exchange_name]
-                del self.singularly_available_markets[market_name]
+        for symbol in exchange.symbols:
+            if symbol in self.collections:
+                self.collections[symbol].append(exchange_name)
+            elif symbol in self.singularly_available_markets:
+                self.collections[symbol] = [self.singularly_available_markets[symbol], exchange_name]
+                del self.singularly_available_markets[symbol]
             else:
-                self.singularly_available_markets[market_name] = exchange_name
+                self.singularly_available_markets[symbol] = exchange_name
+
+
+class SymbolCollectionBuilder(CollectionBuilder):
+
+    def __init__(self, exchanges: list = None, symbols: list = None, exclusive_currencies: list = None,
+                 inclusive_currencies: list = None):
+        """
+        :param symbols: symbols which should be added to the collections
+        :param exclusive_currencies: currencies for which markets should be fetched if the paired currency is also
+        in exclusive_currencies
+        :param inclusive_currencies: currencies for which all markets should be fetched
+        """
+        if exchanges is None:
+            exchanges = []
+        if symbols is None:
+            symbols = []
+        if exclusive_currencies is None:
+            exclusive_currencies = []
+        if inclusive_currencies is None:
+            inclusive_currencies = []
+        super(SymbolCollectionBuilder, self).__init__(exchanges)
+        self.symbols = symbols
+        self.exclusive_currencies = exclusive_currencies
+        self.inclusive_currencies = inclusive_currencies
+
+    async def _add_exchange_to_collections(self, exchange: ccxt.Exchange, ccxt_errors=True, ):
+        try:
+            await exchange.load_markets()
+        except ccxt.BaseError as e:
+            if ccxt_errors:
+                await exchange.close()
+                raise e
+            return
+
+        exch_currencies = exchange.currencies
+        for i, i_currency in enumerate(self.exclusive_currencies):
+            if i_currency not in exch_currencies:
+                continue
+            for j in range(i + 1, len(self.exclusive_currencies)):
+                if self.exclusive_currencies[j] not in exch_currencies:
+                    continue
+                symbol = '{}/{}'.format(i_currency, self.exclusive_currencies[j])
+                if symbol in exchange.symbols:
+                    self._add_exchange_to_symbol(symbol, exchange.id)
+                else:
+                    symbol = '{}/{}'.format(self.exclusive_currencies[j], i_currency)
+                    if symbol in exchange.symbols:
+                        self._add_exchange_to_symbol(symbol, exchange.id)
+
+        for symbol in exchange.symbols:
+            try:
+                base, quote = symbol.split('/')
+            # for spot and other weird markets
+            except ValueError:
+                continue
+            if base in self.inclusive_currencies or quote in self.inclusive_currencies:
+                self._add_exchange_to_symbol(symbol, exchange.id)
+            # elif because it was already added
+            elif symbol in self.symbols:
+                self._add_exchange_to_symbol(symbol, exchange.id)
+
+    def _add_exchange_to_symbol(self, key, value):
+        if key not in self.collections:
+            self.collections[key] = [value]
+        else:
+            if value not in self.collections[key]:
+                self.collections[key].append(value)
 
 
 class SpecificCollectionBuilder(CollectionBuilder):
@@ -112,8 +157,9 @@ class SpecificCollectionBuilder(CollectionBuilder):
         self.rules = kwargs
         self.blacklist = blacklist
 
-    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=False):
-        exchange = getattr(ccxt, exchange_name)()
+    async def _add_exchange_to_collections(self, exchange_name: str, ccxt_errors=True, name=True):
+        if name:
+            exchange = getattr(ccxt, exchange_name)()
         if ccxt_errors:
             await exchange.load_markets()
             await exchange.close()
@@ -168,7 +214,6 @@ class SpecificCollectionBuilder(CollectionBuilder):
                     # this line is A XOR B where A is self.blacklist and B is desired_value not in actual_value
                     if self.blacklist != (actual_value[key_a] != value_a):
                         return False
-
             else:
                 # if desired_value is a list of length 1 and its only element == actual_value (or != if self.blacklist)
                 if isinstance(desired_value, list):
@@ -176,7 +221,6 @@ class SpecificCollectionBuilder(CollectionBuilder):
                         return False
                 elif self.blacklist != (actual_value != desired_value):
                     return False
-
         return True
 
     def _element_of_type_in_list(self, element, actual_value_type, actual_value, key):
@@ -186,124 +230,24 @@ class SpecificCollectionBuilder(CollectionBuilder):
         :param key: The name of the Exchange property
         :return: a boolean
         """
+
         if not isinstance(element, actual_value_type):
             raise ValueError("Exchange attribute {} is a list of {}s. "
                              "A non-{} object was passed.".format(key, str(actual_value_type),
                                                                   str(actual_value_type)))
-        # this line is A XOR B where A is self.blacklist and B is desired_value not in actual_value
-        if self.blacklist != (element not in actual_value):
-            return False
-
-        return True
+        return self.blacklist == (element not in actual_value)
 
 
-class ExchangeMultiGraphBuilder:
-
-    def __init__(self, exchanges: list):
-        self.exchanges = exchanges
-        self.graph = nx.MultiGraph()
-
-    def build_multi_graph(self, write=False, ccxt_errors=False):
-        futures = [asyncio.ensure_future(self._add_exchange_to_graph(exchange_name, ccxt_errors)) for
-                   exchange_name in self.exchanges]
-        asyncio.get_event_loop().run_until_complete(asyncio.gather(*futures))
-
-        if write:
-            with open('collections/graph.json', 'w') as outfile:
-                json.dump(self.graph, outfile)
-
-        return self.graph
-
-    async def _add_exchange_to_graph(self, exchange_name: str, ccxt_errors=False):
-        """
-        :param ccxt_errors: if true, raises errors ccxt raises when calling load_markets. The common ones are
-        RequestTimeout and ExchangeNotAvailable, which are caused by problems with exchanges' APIs.
-        """
-        exchange = getattr(ccxt, exchange_name)()
-        if ccxt_errors:
-            await exchange.load_markets()
-            await exchange.close()
-        else:
-            try:
-                await exchange.load_markets()
-                await exchange.close()
-            except ccxt.BaseError:
-                await exchange.close()
-                return
-
-        for market_name in exchange.symbols:
-            currencies = market_name.split('/')
-
-            try:
-                self.graph.add_edge(currencies[0], currencies[1], exchange_name=exchange_name, market_name=market_name)
-            # certain exchanges (lykke, possibly more)
-            except IndexError as e:
-                pass
-
-
-def build_multi_graph_for_exchanges(exchanges: list):
-    """
-    A wrapper function for the usage of the ExchangeMultiGraphBuilder class which returns a dict as specified in the
-    docstring of __init__ in ExchangeMultiGraphBuilder.
-    :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
-    """
-    return ExchangeMultiGraphBuilder(exchanges).build_multi_graph()
-
-
-def build_arbitrage_graph_for_exchanges(exchanges: list, k_core=2):
-    """
-    This function is currently inefficient as it finds the entire graph for the given exchanges then finds the k-core
-    for that graph. todo: It would be great if someone could improve the efficiency of it but this is not a priority.
-
-    IMPORTANT: For this function to work, the @not_implemented_for('multigraph') decorator above the core_number
-    function in networkx.algorithms.core.py must be removed or commented out.
-    Todo: Improve this project so that the above does not have to be done.
-
-    :param exchanges: A list of exchanges (e.g. ['bittrex', 'poloniex', 'bitstamp', 'anxpro']
-    """
-    return nx.k_core(build_multi_graph_for_exchanges(exchanges), k_core)
-
-
-def build_collections(blacklist=False, write=True, ccxt_errors=False):
-    return build_specific_collections(blacklist, write,
-                                      ccxt_errors, has={'fetchOrderBook': True})
-
-
-async def async_build_specific_collections(blacklist=False, write=False, ccxt_errors=False, **kwargs):
+async def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, **kwargs):
     builder = SpecificCollectionBuilder(blacklist, **kwargs)
-    return await builder.async_build_all_collections(write, ccxt_errors)
+    return await builder.build_collections(write, ccxt_errors)
 
 
-def build_specific_collections(blacklist=False, write=False, ccxt_errors=False, **kwargs):
-    try:
-        asyncio.get_event_loop().run_until_complete(
-            async_build_specific_collections(blacklist, write, ccxt_errors, **kwargs)
-        )
-    except RuntimeError:
-        raise RuntimeError('build_specific_collections was called from an asynchronous context. The event loop is '
-                           'already running. You probably meant to use async_build_specific_collections')
+async def build_collections(exchanges=None, write=True, ccxt_errors=False):
+    return await CollectionBuilder(exchanges).build_collections(write, ccxt_errors)
 
 
-async def async_build_all_collections(write=True, ccxt_errors=False):
-    """
-    Be careful when using this. build_collections is typically preferred over this method because build_collections only
-    accounts for exchanges which have a private API (and thus can be traded on).
-    :param write:
-    :param ccxt_errors:
-    :return:
-    """
-    builder = CollectionBuilder()
-    return await builder.async_build_all_collections(write, ccxt_errors)
-
-
-def build_all_collections(write=True, ccxt_errors=False):
-    """
-    Synchronous wrapper for async_build_all_collections
-    """
-    asyncio.get_event_loop().run_until_complete(async_build_all_collections(write, ccxt_errors))
-
-
-async def async_get_exchanges_for_market(symbol, collections_dir='./'):
+async def get_exchanges_for_market(symbol, collections_dir='./'):
     """
     Returns the list of exchanges on which a market is traded
     """
@@ -314,7 +258,7 @@ async def async_get_exchanges_for_market(symbol, collections_dir='./'):
             if market_name == symbol:
                 return exchanges
     except FileNotFoundError:
-        return build_specific_collections(symbols=[symbol])
+        return await build_specific_collections(symbols=[symbol])
 
     with open('{}singularly_available_markets.json'.format(collections_dir)) as f:
         singularly_available_markets = json.load(f)
@@ -323,16 +267,3 @@ async def async_get_exchanges_for_market(symbol, collections_dir='./'):
             return [exchange]
 
     raise ExchangeNotInCollectionsError(symbol)
-
-
-def get_exchanges_for_market(symbol, collections_dir='./'):
-    """
-    Synchronous wrapper for async_build_all_collections
-    """
-    try:
-        asyncio.get_event_loop().run_until_complete(
-            async_get_exchanges_for_market(symbol, collections_dir)
-        )
-    except RuntimeError:
-        raise RuntimeError('build_specific_collections was called from an asynchronous context. The event loop is '
-                           'already running. You probably meant to use async_build_specific_collections')

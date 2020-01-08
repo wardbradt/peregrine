@@ -22,7 +22,7 @@ me (wardbradt5@gmail.com) if there are features you would like.
     To install from the [development branch](https://github.com/wardbradt/peregrine/tree/dev), run:
     
     ```
-    pip install git+https://github.com/wardbradt/peregrine
+    pip install git+https://github.com/wardbradt/peregrine@dev
     ```
 
 ## Usage
@@ -62,7 +62,6 @@ If you want to find opportunities on the exchanges of only a certain country<sup
 ```python
 from peregrinearb import build_specific_collections, get_opportunity_for_market
 
-
 us_eth_btc_exchanges = build_specific_collections(countries=['US'])
 collections_dir = '/Users/wardbradt/cs/peregrine/'
 opportunity = get_opportunity_for_market("ETH/BTC", collections_dir, us_eth_btc_exchanges["ETH/BTC"])
@@ -76,14 +75,14 @@ print(opportunity)
 ```python
 import asyncio
 from peregrinearb import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
-graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph('binance'))
+graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph('hitbtc'))
 
-paths = bellman_ford(graph, 'BTC')
+paths = bellman_ford(graph)
 for path in paths:
     print_profit_opportunity_for_path(graph, path)
 ```
 
-This prints all of the arbitrage opportunities on the given exchange (in this case, Binance). At the time of writing, the first opportunity printed out is:
+This prints all of the arbitrage opportunities on the given exchange (in this case, HitBTC). At the time of writing, the first opportunity printed out is:
 
 ```
 Starting with 100 in BTC
@@ -98,15 +97,34 @@ If you would like to account for transaction fees, set `fees=True` when calling 
 import asyncio
 from peregrinearb import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
 
+graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph('gdax', fees=True))
 
-loop = asyncio.get_event_loop()
-graph = loop.run_until_complete(load_exchange_graph('binance', fees=True))
-
-paths = bellman_ford(graph, 'BTC', unique_paths=True)
+paths = bellman_ford(graph)
 for path in paths:
     print_profit_opportunity_for_path(graph, path)
 ```
 
+To find the maximum volume that can be used to execute the opportunity, set `depth=True` when calling `bellman_ford`. To my knowledge, the only exchange which offers the functionality of simultaneously fetching the volumes of the top price levels for all markets is Binance.
+```python
+import asyncio
+from peregrinearb import load_exchange_graph, print_profit_opportunity_for_path, bellman_ford
+
+graph = asyncio.get_event_loop().run_until_complete(load_exchange_graph('binance'))
+
+paths = bellman_ford(graph, depth=True)
+for path, starting_amount in paths:
+    # Note that depth=True and starting_amount are set in this example
+    print_profit_opportunity_for_path(graph, path, depth=True, starting_amount=starting_amount)
+```
+This would output:
+```
+Starting with 0.25 in BTC
+BTC to USDT at 7955.100000 = 1988.775
+USDT to NEO at 0.016173 = 32.1652110625
+NEO to ETH at 0.110995 = 3.5701776025
+ETH to XLM at 2709.292875 = 9,672.65673772
+XLM to BTC at 0.000026 = 0.25052181
+```
 ### Multiple Exchanges/ Multiple Currencies
 
 ```python
