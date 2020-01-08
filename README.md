@@ -2,14 +2,7 @@
 
 A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries on over 38,000 trading pairs
 
-### [Project Status](#project-status) · [Install](#install) · [Usage](#usage) · [Upcoming Changes](#upcoming-changes) 
-
-## Project Status
-I have merged the [previously upstream fork](https://github.com/Stakedllc/peregrine) of the Peregrine into the 
-[`dev` branch](https://github.com/wardbradt/peregrine/tree/dev). I am making changes (discussed [here](#upcoming-changes)) to the project on this
-branch to improve usability and performance. `dev` will be merged into master after the improvements are complete 
-and I have written tests to ensure that everything works as it should. Please create a GitHub issue or contact 
-me (wardbradt5@gmail.com) if there are features you would like.
+### [Install](#install) · [Usage](#usage) · [Upcoming Changes](#upcoming-changes) 
 
 ## Install
 1. Ensure you have [installed pip](https://pip.pypa.io/en/stable/installing/).
@@ -19,12 +12,6 @@ me (wardbradt5@gmail.com) if there are features you would like.
     pip install git+https://github.com/wardbradt/peregrine
     ```
     
-    To install from the [development branch](https://github.com/wardbradt/peregrine/tree/dev), run:
-    
-    ```
-    pip install git+https://github.com/wardbradt/peregrine@dev
-    ```
-
 ## Usage
 
 This section provides a brief overview of Peregrine's functionality. Examples demonstrating many more features are available in [peregrine/examples](https://github.com/wardbradt/peregrine/tree/master/examples).
