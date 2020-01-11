@@ -21,8 +21,7 @@ This section provides a brief overview of Peregrine's functionality. Examples de
 ```python
 from peregrinearb import get_opportunity_for_market
 import asyncio
-collections_dir = '/Users/wardbradt/cs/peregrine/'
-opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD", collections_dir))
+opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD"))
 print(opportunity)
 ```
 
@@ -39,8 +38,7 @@ If you want to specify which exchanges to find opportunities on:
 from peregrinearb import get_opportunity_for_market
 import asyncio
 
-collections_dir = '/Users/wardbradt/cs/peregrine/'
-opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD", collections_dir, exchanges=["anxpro", "bitbay", "coinfloor", "gemini", "livecoin"]))
+opportunity = asyncio.get_event_loop().run_until_complete(get_opportunity_for_market("BTC/USD", exchanges=["anxpro", "bitbay", "coinfloor", "gemini", "livecoin"]))
 print(opportunity)
 ```
 
@@ -50,8 +48,7 @@ If you want to find opportunities on the exchanges of only a certain country<sup
 from peregrinearb import build_specific_collections, get_opportunity_for_market
 
 us_eth_btc_exchanges = build_specific_collections(countries=['US'])
-collections_dir = '/Users/wardbradt/cs/peregrine/'
-opportunity = get_opportunity_for_market("ETH/BTC", collections_dir, us_eth_btc_exchanges["ETH/BTC"])
+opportunity = get_opportunity_for_market("ETH/BTC", us_eth_btc_exchanges["ETH/BTC"])
 print(opportunity)
 ```
 

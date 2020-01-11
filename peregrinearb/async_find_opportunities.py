@@ -2,7 +2,7 @@ import ccxt.async_support as ccxt
 from .async_build_markets import get_exchanges_for_market
 import asyncio
 import logging
-from .settings import INTER_LOGGING_PATH
+from .settings import INTER_LOGGING_PATH, COLLECTIONS_DIR
 import datetime
 from .utils import Collections
 from .utils.logging_utils import FormatForLogAdapter
@@ -28,13 +28,26 @@ class InterExchangeAdapter(logging.LoggerAdapter):
 
 __all__ = [
     'OpportunityFinder',
-    'get_opportunity_for_market'
+    'get_opportunity_for_market',
+    'initialize_exchanges',
 ]
+
+
+async def initialize_exchanges(market_name, exchanges=None):
+    """
+    :param market_name: A trading symbol such as BTC/USD.
+    :param exchanges: A list of strings representing exchange names as recognized by ccxt.
+    :return:
+    """
+    if exchanges is None:
+        exchanges = await get_exchanges_for_market(market_name, COLLECTIONS_DIR)
+    exchanges = [getattr(ccxt, exchange_id)() for exchange_id in exchanges]
+    return exchanges
 
 
 class OpportunityFinder:
 
-    def __init__(self, market_name, exchanges=None, name=True, invocation_id=0):
+    def __init__(self, market_name, exchanges, invocation_id=0):
         """
         An object of type OpportunityFinder finds the largest price disparity between exchanges for a given
         cryptocurrency market by finding the exchange with the lowest market ask price and the exchange with the
@@ -43,13 +56,6 @@ class OpportunityFinder:
         logger = logging.getLogger(INTER_LOGGING_PATH + __name__)
         self.adapter = InterExchangeAdapter(logger, {'invocation_id': invocation_id, 'market': market_name})
         self.adapter.debug('Initializing OpportunityFinder for {}'.format(market_name))
-
-        if exchanges is None:
-            self.adapter.warning('Parameter name\'s being false has no effect.')
-            exchanges = get_exchanges_for_market(market_name)
-
-        if name:
-            exchanges = [getattr(ccxt, exchange_id)() for exchange_id in exchanges]
 
         self.exchange_list = exchanges
         self.market_name = market_name
@@ -321,7 +327,9 @@ def get_opportunities_for_collection(exchanges, collections, name=True):
 
 async def get_opportunity_for_market(ticker, exchanges=None, name=True, invocation_id=0):
     file_logger.info('Invocation#{} - Finding lowest ask and highest bid for {}'.format(invocation_id, ticker))
-    finder = OpportunityFinder(ticker, exchanges=exchanges, name=name)
+    if exchanges is None or name:
+        exchanges = await initialize_exchanges(ticker, exchanges)
+    finder = OpportunityFinder(ticker, exchanges=exchanges, invocation_id=invocation_id)
     result = await finder.find_min_max()
     file_logger.info('Invocation#{} - Found lowest ask and highest bid for {}'.format(invocation_id, ticker))
     return result

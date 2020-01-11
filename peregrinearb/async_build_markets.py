@@ -258,7 +258,8 @@ async def get_exchanges_for_market(symbol, collections_dir='./'):
             if market_name == symbol:
                 return exchanges
     except FileNotFoundError:
-        return await build_specific_collections(symbols=[symbol])
+        coll_dict = await build_specific_collections(symbols=[symbol])
+        return coll_dict[symbol]
 
     with open('{}singularly_available_markets.json'.format(collections_dir)) as f:
         singularly_available_markets = json.load(f)
