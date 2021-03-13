@@ -129,6 +129,8 @@ async def _add_market_to_multi_digraph(exchange, market_name: str, graph: nx.DiG
     fee_scalar = 1 - exchange['fee']
 
     if log:
+        # math.log raises exception when dealing with zero values
+        # we prefer math.log1p instead
         graph.add_edge(base_currency, quote_currency,
                        market_name=market_name,
                        exchange_name=exchange['object'].id,
