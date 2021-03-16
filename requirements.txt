@@ -1,5 +1,4 @@
-git+git://github.com/wardbradt/networkx.git#egg=networkx
-numpy
-ccxt
-# Only necessary if you will be modifying or using cythonperegrine
-Cython
+numpy==1.19.4
+ccxt==1.42.99
+networkx==2.2rc1.dev20210313013043
+Cython==0.29.17
