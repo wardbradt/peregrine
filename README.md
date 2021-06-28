@@ -2,7 +2,13 @@
 
 A Python library which provides several algorithms to detect arbitrage opportunities across over 120 cryptocurrency exchanges in 48 countries on over 38,000 trading pairs
 
-### [Install](#install) · [Usage](#usage) · [Upcoming Changes](#upcoming-changes) 
+I created this in 2017 as a proof-of-concept to familiarize myself with cryptocurrency arbitrage. 
+I had fun building it, but do not presently have the bandwidth to maintain the repository. 
+There are some known issues. 
+See the [Future Development](#future-development) section to see current issues and ideas for improvement.
+
+
+### [Install](#install) · [Usage](#usage) · [Future Development](#future-development) 
 
 ## Install
 1. Ensure you have [installed pip](https://pip.pypa.io/en/stable/installing/).
@@ -175,32 +181,19 @@ USD to BCH at 0.000949667616334283 = 62.61645540736334 on kraken for BCH/USD
 BCH to ETH at 1.8874401 = 118.18480885571941 on bittrex for BCH/ETH
 ```
 
-## Upcoming Changes
-### In Development
-The following changes are in progress on the `dev` branch or will be soon.
-##### General
-* Adding logging
-* Upgrade from Python 3.6 -> Python 3.7 to enable compatibility with new ccxt releases. **Done**
-* Improving modularity to enable usage of the library for user-provided price data such as data from non-integrated 
-exchanges or data received via WebSocket.
-* Changing the module structure to separate features and dependencies
-* Deprecating certain features
-* General restructuring and changes to improve usability and performance
+## Future Development
+I do not presently actively maintain this project but will respond to issues and pull requests.
 
-##### Bellman Ford
-* Adding the functionality of average price (`best_bid` + `best_ask` / 2) instead of best price for triangular arbitrage ([Requested here](https://github.com/wardbradt/peregrine/issues/39))
-* Ensuring all graphs have a "k-core" of 2 to improve performance
-* Adding the functionality to exclude or exclusively include certain currencies ([Requested Here](https://github.com/wardbradt/peregrine/issues/43))
-* Fixing functionality of depth
+### Issues
+See the repository's [Issues](https://github.com/wardbradt/peregrine/issues) tab for user-submitted issues. At the time of writing, issues I am aware of are:
+- async functionality may be broken
+- some issues with relative paths to generated json files
 
-### Planned
-These are subject to change. I currently intend to implement them after those listed above are complete. 
+### Enhancements
 
-##### Bellman Ford
-* Using `scipy` sparse matrices instead of `networkx` graphs to increase Bellman Ford performance
+Improvements that would be appreciated:
 
-    This is more of an upgrade to scipy than this project. This is because scipy's Bellman Ford implementation currently raises an error if a negative cycle is found--there is no mechanism for retracing the negative cycle.
-
-* Implementing [Yen's improvements](https://en.wikipedia.org/wiki/Bellman%E2%80%93Ford_algorithm#Improvements) to Bellman Ford 
-
-    This will likely be done only after/ while upgrading to scipy so that it isn't done twice.
+- Prune graph into connected components to improve runtimne
+- Split graph into cycles to find most profitable, instead of any, arbitrage opportunity
+    - A good algorithm to do this is [Johnson's 1975 Cycle-Finding Algorithm](https://www.cs.tufts.edu/comp/150GA/homeworks/hw1/Johnson%2075.PDF)
+- Update requirements and Python version
